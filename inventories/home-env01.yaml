@@ -86,24 +86,70 @@ KUBE_APISERVER:
   hosts:
     master-1:
       ansible_host: 192.168.1.51
+      host_files:
+        etcd-keyfile:
+          src: files/etcd-server1.key
+          dst: /var/lib/kubernetes/etcd-server1.key
+        etcd-certfile:
+          src: files/etcd-server1.crt
+          dst: /var/lib/kubernetes/etcd-server1.crt
     master-2:
       ansible_host: 192.168.1.52
+      host_files:
+        etcd-keyfile:
+          src: files/etcd-server2.key
+          dst: /var/lib/kubernetes/etcd-server2.key
+        etcd-certfile:
+          src: files/etcd-server2.crt
+          dst: /var/lib/kubernetes/etcd-server2.crt
   vars:
     ports:
       - 6443/tcp
     selinux_state: permissive
     pkgs:
-      - haproxy-3.0.5
       - wget
       - vim
-    etcd:
-      ca:
-        key: ca.key
-        cert: ca.crt
-      etcd-ca:
-        key: etcd-ca.key
-        cert: etcd-ca.crt
-        urls:
-          - src: https://github.com/etcd-io/etcd/releases/download/v3.6.7/etcd-v3.6.7-linux-amd64.tar.gz
-            dst: /usr/local/bin
+    cluster_files:
+      tls-private-key-file:
+        src: files/kube-apiserver.key
+        dst: /var/lib/kubernetes/kube-apiserver.key
+      tls-cert-file:
+        src: files/kube-apiserver.crt
+        dst: /var/lib/kubernetes/kube-apiserver.crt
+      client-ca-file:
+        src: files/ca.crt
+        dst: /var/lib/kubernetes/ca.crt
+      kubelet-client-key:
+        src: files/kube-apiserver.key
+        dst: /var/lib/kubernetes/kube-apiserver.key
+      kubelet-client-certificate:
+        src: files/kube-apiserver.crt
+        dst: /var/lib/kubernetes/kube-apiserver.crt
+      kubelet-certificate-authority:
+        src: files/ca.crt
+        dst: /var/lib/kubernetes/ca.crt
+      etcd-cafile:
+        src: files/etcd-ca.crt
+        dst: /etc/etcd/etcd-ca.crt
+      encryption-provider-config:
+        src: files/encryption-config.yaml
+        dst: /var/lib/kubernetes/encryption-config.yaml
+      service-account-signing-key-file:
+        src: files/service-account.key 
+        dst: /var/lib/kubernetes/service-account.key 
+      service-account-key-file:
+        src: files/service-account.crt
+        dst: /var/lib/kubernetes/service-account.crt
+    params:
+      service-cluster-ip-range: 10.96.0.0/12
+    urls:
+      kube_apiserver:
+        src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kube-apiserver
+        dst: /usr/local/bin/kube-apiserver
+      kubectl:
+        src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kubectl
+        dst: /usr/local/bin/kubectl
+    service_name: kube-apiserver
+    dirs:
+      data_dir: /var/lib/kubernetes
 

@@ -29,7 +29,7 @@
     dest: "{{ item.value.dst }}"
   loop: "{{ host_files | dict2items }}"
 
-- name: Start and enable httpd
+- name: Start and enable service
   systemd:
     name: "{{ service_name }}"
     state: started

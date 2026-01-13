@@ -1,5 +1,5 @@
 ---
-- hosts: ETCD
+- hosts: KUBE_APISERVER
   become: yes
   gather_facts: false
 

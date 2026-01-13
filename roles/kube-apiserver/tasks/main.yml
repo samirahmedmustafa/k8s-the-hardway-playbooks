@@ -1,2 +1,42 @@
 ---
-# tasks file for roles/kube-apiserver
+# tasks file for roles/etcd
+
+- name: Download binaries
+  ansible.builtin.get_url:
+    url: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+    validate_certs: false
+    mode: '0655'
+  loop: "{{ urls | dict2items }}"
+
+- name: write templates using jinja2
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
+  loop: "{{ templates }}"
+
+- name: create directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop: "{{ dirs | dict2items }}"
+
+- name: copy CA certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ cluster_files | dict2items }}"
+
+- name: copy server certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ host_files | dict2items }}"
+
+- name: Start and enable service
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+    enabled: true
+    daemon-reload: yes
+
