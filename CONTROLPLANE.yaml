@@ -1,0 +1,13 @@
+---
+- import_playbook: ETCD.yaml
+  tags:
+    - ETCD
+- import_playbook: KUBE_APISERVER.yaml
+  tags:
+    - KUBE_APISERVER
+- import_playbook: KUBE_SCHEDULER.yaml
+  tags:
+    - KUBE_SCHEDULER
+- import_playbook: KUBE_CONTROL_MANAGER.yaml
+  tags:
+    - KUBE_CONTROL_MANAGER

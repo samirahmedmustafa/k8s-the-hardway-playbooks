@@ -1,0 +1,109 @@
+---
+LB:
+  hosts:
+    lb:
+      ansible_host: 192.168.1.50
+  vars:
+    ports:
+      - 6443/tcp
+    selinux_state: permissive
+    pkgs:
+      - haproxy-3.0.5
+      - wget
+      - vim
+    templates:
+      - src: templates/haproxy.cfg.j2
+        dst: /etc/haproxy/haproxy.cfg
+    kube_apiserver_port: 6443
+    service_name: haproxy
+ETCD:
+  hosts:
+    etcd-server1:
+      ansible_host: 192.168.1.51
+      host_files:
+        cert-file:
+          src: files/etcd-server1.crt
+          dst: /etc/etcd/etcd-server1.crt
+        key-file:
+          src: files/etcd-server1.key
+          dst: /etc/etcd/etcd-server1.key
+        peer-cert-file:
+          src: files/etcd-server1.crt
+          dst: /etc/etcd/etcd-server1.crt
+        peer-key-file:
+          src: files/etcd-server1.key
+          dst: /etc/etcd/etcd-server1.key
+    etcd-server2:
+      ansible_host: 192.168.1.52
+      host_files:
+        cert-file:
+          src: files/etcd-server2.crt
+          dst: /etc/etcd/etcd-server2.crt
+        key-file:
+          src: files/etcd-server2.key
+          dst: /etc/etcd/etcd-server2.key
+        peer-cert-file:
+          src: files/etcd-server2.crt
+          dst: /etc/etcd/etcd-server2.crt
+        peer-key-file:
+          src: files/etcd-server2.key
+          dst: /etc/etcd/etcd-server2.key
+  vars:
+    ports:
+      - 2380/tcp
+      - 2379/tcp
+    selinux_state: permissive
+    pkgs:
+      - wget
+      - vim
+    cluster_files:
+      ca-key:
+        src: files/etcd-ca.key
+        dst: /etc/etcd/etcd-ca.key
+      ca-cert:
+        src: files/etcd-ca.crt
+        dst: /etc/etcd/etcd-ca.crt
+      trusted-ca-file:
+        src: files/etcd-ca.key
+        dst: /etc/etcd/etcd-ca.key
+      peer-trusted-ca-file:
+        src: files/etcd-ca.crt
+        dst: /etc/etcd/etcd-ca.crt
+    urls:
+      etcd:
+        src: https://github.com/etcd-io/etcd/releases/download/v3.6.7/etcd-v3.6.7-linux-amd64.tar.gz
+        dst: /usr/local/bin
+    templates:
+      - src: templates/etcd.service.j2
+        dst: /etc/systemd/system/etcd.service
+      - src: templates/hosts.j2
+        dst: /etc/hosts
+    service_name: etcd
+    dirs:
+      data_dir: /var/lib/etcd
+      etcd_conf: /etc/etcd
+KUBE_APISERVER:
+  hosts:
+    master-1:
+      ansible_host: 192.168.1.51
+    master-2:
+      ansible_host: 192.168.1.52
+  vars:
+    ports:
+      - 6443/tcp
+    selinux_state: permissive
+    pkgs:
+      - haproxy-3.0.5
+      - wget
+      - vim
+    etcd:
+      ca:
+        key: ca.key
+        cert: ca.crt
+      etcd-ca:
+        key: etcd-ca.key
+        cert: etcd-ca.crt
+        urls:
+          - src: https://github.com/etcd-io/etcd/releases/download/v3.6.7/etcd-v3.6.7-linux-amd64.tar.gz
+            dst: /usr/local/bin
+

@@ -1,0 +1,11 @@
+---
+- hosts: LB
+  become: yes
+  gather_facts: false
+
+  roles:
+    - role: common
+      tags: common
+    - role: haproxy
+      tags: haproxy
+

@@ -1,0 +1,11 @@
+---
+- hosts: KUBE_CONTROL_MANAGER
+  become: yes
+  gather_facts: false
+
+  roles:
+    - role: common
+      tags: common
+    - role: kube-control-manager
+      tags: kube-control-manager
+

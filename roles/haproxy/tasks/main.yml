@@ -1,0 +1,19 @@
+---
+# tasks file for roles/haproxy
+- name: Install the required packages
+  ansible.builtin.dnf:
+    name: "{{ pkgs }}"
+
+- name: copying haproxy templates
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
+  loop: "{{ templates }}"
+
+- name: Start and enable httpd
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+    enabled: true
+    daemon-reload: yes
+

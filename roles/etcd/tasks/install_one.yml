@@ -1,0 +1,25 @@
+---
+- name: Install etcd binaries
+  block:
+    - name: Download etcd archive using curl
+      ansible.builtin.command: >
+        curl -L -o /tmp/etcd.tar.gz {{ item.value.src }}
+      args:
+        creates: /tmp/etcd.tar.gz
+
+    - name: Extract etcd archive
+      ansible.builtin.unarchive:
+        src: "/tmp/etcd.tar.gz"
+        dest: "{{ item.value.dst }}"
+        remote_src: yes
+  rescue:
+    - name: Cleanup failed download
+      ansible.builtin.file:
+        path: "/tmp/etcd.tar.gz"
+        state: absent
+  always:
+    - name: Ensure destination directory exists
+      ansible.builtin.file:
+        path: "{{ item.value.dst }}"
+        state: directory
+        mode: '0755'

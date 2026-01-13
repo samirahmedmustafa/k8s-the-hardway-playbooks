@@ -1,0 +1,9 @@
+- name: Opening common firewalld ports on the public zone
+  ansible.posix.firewalld:
+    zone: public
+    port: "{{ item }}"
+    permanent: true
+    immediate: true
+    state: enabled
+  loop: "{{ ports }}"
+

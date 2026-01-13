@@ -1,0 +1,38 @@
+---
+# tasks file for roles/etcd
+
+- name: Install etcd binaries
+  include_tasks: install_one.yml
+  loop: "{{ urls | dict2items }}"
+
+- name: write templates using jinja2
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
+  loop: "{{ templates }}"
+
+- name: create etcd directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop: "{{ dirs | dict2items }}"
+
+- name: copy CA certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ cluster_files | dict2items }}"
+
+- name: copy server certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ host_files | dict2items }}"
+
+- name: Start and enable httpd
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+    enabled: true
+    daemon-reload: yes
+

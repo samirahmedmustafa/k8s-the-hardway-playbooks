@@ -1,0 +1,11 @@
+---
+- hosts: ETCD
+  become: yes
+  gather_facts: false
+
+  roles:
+    - role: common
+      tags: common
+    - role: etcd
+      tags: etcd
+
