@@ -14,11 +14,11 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --authorization-mode=Node,RBAC \
   --bind-address=0.0.0.0 \
   --enable-admission-plugins=NodeRestriction,ServiceAccount \
-  --enable-bootstrap-token-auth \
-  --etcd-cafile={{ cluster_files["etcd-cafile].dst }} \
-  --etcd-certfile={{ cluster_files["etcd-certfile"].dst }} \
+  --enable-bootstrap-token-auth  \
+  --etcd-cafile={{ cluster_files["etcd-cafile"].dst }} \
+  --etcd-certfile={{ host_files["etcd-certfile"].dst }} \
   --etcd-keyfile={{ host_files["etcd-keyfile"].dst }} \
-  --etcd-servers={%- for host in groups['ETCD'] -%} https://{{ hostvars[host]['ansible_host'] }}:2379 {%- if not loop.last %},{% endif -%} {%- endfor -%} \
+  --etcd-servers={% for host in groups['ETCD'] -%} https://{{ hostvars[host]['ansible_host'] }}:2379 {%- if not loop.last %},{% endif -%} {%- endfor %} \
   --event-ttl=1h \
   --encryption-provider-config={{ cluster_files["encryption-provider-config"].dst }} \
   --kubelet-certificate-authority={{ cluster_files["kubelet-certificate-authority"].dst }} \
@@ -26,8 +26,8 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --kubelet-client-key={{ cluster_files["kubelet-client-key"].dst }} \
   --runtime-config=api/all=true \
   --service-account-issuer=https://{{ ansible_host }}:6443 \
-  --service-account-signing-key-file={{ cluster_files["service-account-signing-key-file"].dst }} \
-  --service-account-key-file={{ cluster_files["service-account-key-file"].dst }} \
+  --service-account-signing-key-file={{ serviceaccount_files["service-account-signing-key-file"].dst }} \
+  --service-account-key-file={{ serviceaccount_files["service-account-key-file"].dst }} \
   --service-cluster-ip-range={{ params["service-cluster-ip-range"] }} \
   --service-node-port-range=30000-32767 \
   --client-ca-file={{ cluster_files["client-ca-file"].dst }} \

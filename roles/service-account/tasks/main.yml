@@ -1,0 +1,10 @@
+---
+# tasks file for roles/service-account
+- name: copy certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ serviceaccount_files | dict2items }}"
+
+
+

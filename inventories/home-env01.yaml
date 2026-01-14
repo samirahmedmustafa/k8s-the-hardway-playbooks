@@ -64,8 +64,8 @@ ETCD:
         src: files/etcd-ca.crt
         dst: /etc/etcd/etcd-ca.crt
       trusted-ca-file:
-        src: files/etcd-ca.key
-        dst: /etc/etcd/etcd-ca.key
+        src: files/etcd-ca.crt
+        dst: /etc/etcd/etcd-ca.crt
       peer-trusted-ca-file:
         src: files/etcd-ca.crt
         dst: /etc/etcd/etcd-ca.crt
@@ -76,8 +76,6 @@ ETCD:
     templates:
       - src: templates/etcd.service.j2
         dst: /etc/systemd/system/etcd.service
-      - src: templates/hosts.j2
-        dst: /etc/hosts
     service_name: etcd
     dirs:
       data_dir: /var/lib/etcd
@@ -109,6 +107,22 @@ KUBE_APISERVER:
     pkgs:
       - wget
       - vim
+    adminaccount_files:
+      admin-account-key:
+        src: files/admin.key
+        dst: /var/lib/kubernetes/admin.key
+      admin-account-cert:
+        src: files/admin.crt
+        dst: /var/lib/kubernetes/admin.crt
+    admin_kubeconfig: /var/lib/kubernetes/admin.kubeconfig
+    serviceaccount_files:
+      service-account-key-file:
+        src: files/service-account.crt
+        dst: /var/lib/kubernetes/service-account.crt
+      service-account-signing-key-file:
+        src: files/service-account.key 
+        dst: /var/lib/kubernetes/service-account.key 
+
     cluster_files:
       tls-private-key-file:
         src: files/kube-apiserver.key
@@ -130,18 +144,14 @@ KUBE_APISERVER:
         dst: /var/lib/kubernetes/ca.crt
       etcd-cafile:
         src: files/etcd-ca.crt
-        dst: /etc/etcd/etcd-ca.crt
+        dst: /var/lib/kubernetes/etcd-ca.crt
       encryption-provider-config:
         src: files/encryption-config.yaml
         dst: /var/lib/kubernetes/encryption-config.yaml
-      service-account-signing-key-file:
-        src: files/service-account.key 
-        dst: /var/lib/kubernetes/service-account.key 
-      service-account-key-file:
-        src: files/service-account.crt
-        dst: /var/lib/kubernetes/service-account.crt
+
     params:
       service-cluster-ip-range: 10.96.0.0/12
+      cluster_name: home-cluster
     urls:
       kube_apiserver:
         src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kube-apiserver
@@ -152,4 +162,135 @@ KUBE_APISERVER:
     service_name: kube-apiserver
     dirs:
       data_dir: /var/lib/kubernetes
+    templates:
+      - src: templates/kube-apiserver.service.j2
+        dst: /etc/systemd/system/kube-api.service
+KUBE_CONTROLLER_MANAGER:
+  hosts:
+    kube-controller-manager-1:
+      ansible_host: 192.168.1.51
+    kube-controller-manager-2:
+      ansible_host: 192.168.1.52
+  vars:
+    ports: []
+    selinux_state: permissive
+    params:
+      kubeconfig: /var/lib/kubernetes/kube-controller-manager.kubeconfig
+      cluster_name: home-cluster
+      creds: system:kube-controller-manager
+      cluster_cidr: 192.168.1.0/24
+      service-cluster-ip-range: 10.96.0.0/12
+      cluster-signing-cert-file: /var/lib/kubernetes/ca.crt
+      cluster-signing-key-file: /var/lib/kubernetes/ca.key
+      root-ca-file: /var/lib/kubernetes/ca.key
+      cluster-signing-key-file: /var/lib/kubernetes/ca.key
+      cluster-signing-cert-file: /var/lib/kubernetes/ca.crt
+      service-account-private-key-file: /var/lib/kubernetes/service-account.key
+      kubeconfig: /var/lib/kubernetes/kube-controller-manager.kubeconfig
+      expiration: 2037-03-10T03:22:11Z
+      auth-extra-groups: system:bootstrappers:worker,system:bootstrappers:ingress
+      controllers: *,tokencleaner # *,bootstrapsigner,tokencleaner
+    pkgs:
+      - wget
+      - vim
 
+    cluster_files:
+      kube-controller-manager-key:
+        src: files/kube-controller-manager.key
+        dst: /var/lib/kubernetes/kube-controller-manager.key
+      kube-controller-manager-cert:
+        src: files/kube-controller-manager.crt
+        dst: /var/lib/kubernetes/kube-controller-manager.crt
+    urls:
+      kube_controller_manager:
+        src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kube-controller-manager
+        dst: /usr/local/bin/kube-controller-manager
+    service_name: kube-controller-manager
+KUBE_SCHEDULER:
+  hosts:
+    kube-scheduler-1:
+      ansible_host: 192.168.1.51
+    kube-scheduler-2:
+      ansible_host: 192.168.1.52
+  vars:
+    ports: []
+    selinux_state: permissive
+    pkgs:
+      - wget
+      - vim
+    params:
+      kubeconfig: /var/lib/kubernetes/kube-scheduler.kubeconfig
+      cluster_name: home-cluster
+      ca_certs: /var/lib/kubernetes/ca.crt
+      creds: system:kube-scheduler
+
+    cluster_files:
+      kube-scheduler-key:
+        src: files/kube-scheduler.key
+        dst: /var/lib/kubernetes/kube-scheduler.key
+      kube-scheduler-cert:
+        src: files/kube-scheduler.crt
+        dst: /var/lib/kubernetes/kube-scheduler.crt
+    templates:
+      - src: templates/kube-scheduler.service.j2
+        dst: /etc/systemd/system/kube-scheduler.service
+    urls:
+      kube_scheduler:
+        src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kube-scheduler
+        dst: /usr/local/bin/kube-scheduler
+    service_name: kube-scheduler
+KUBELET:
+  hosts:
+    worker-1:
+      ansible_host: 192.168.1.53
+      host_files:
+        cert-file:
+          src: files/etcd-server1.crt
+          dst: /etc/etcd/etcd-server1.crt
+        key-file:
+          src: files/etcd-server1.key
+          dst: /etc/etcd/etcd-server1.key
+        peer-cert-file:
+          src: files/etcd-server1.crt
+          dst: /etc/etcd/etcd-server1.crt
+        peer-key-file:
+          src: files/etcd-server1.key
+          dst: /etc/etcd/etcd-server1.key
+    worker-2:
+      ansible_host: 192.168.1.54
+      host_files:
+        cert-file:
+          src: files/etcd-server2.crt
+          dst: /etc/etcd/etcd-server2.crt
+        key-file:
+          src: files/etcd-server2.key
+          dst: /etc/etcd/etcd-server2.key
+        peer-cert-file:
+          src: files/etcd-server2.crt
+          dst: /etc/etcd/etcd-server2.crt
+        peer-key-file:
+          src: files/etcd-server2.key
+          dst: /etc/etcd/etcd-server2.key
+  vars:
+    ports:
+      - 2380/tcp
+      - 2379/tcp
+    selinux_state: permissive
+    pkgs:
+      - wget
+      - vim
+    cluster_files:
+      ca-key:
+        src: files/etcd-ca.key
+        dst: /etc/etcd/etcd-ca.key
+      ca-cert:
+        src: files/etcd-ca.crt
+        dst: /etc/etcd/etcd-ca.crt
+all:
+  vars:
+    common:
+        templates:
+          - src: templates/hosts.j2
+            dst: /etc/hosts
+  
+ 

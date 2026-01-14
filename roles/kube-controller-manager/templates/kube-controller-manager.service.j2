@@ -1,0 +1,26 @@
+[Unit]
+Description=Kubernetes Controller Manager
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-controller-manager \
+  --bind-address=0.0.0.0 \
+  --cluster-cidr={{ params["cluster_cidr"] }} \
+  --cluster-name={{ params["cluster_name"] }} \
+  --cluster-signing-cert-file={{ params["cluster-signing-cert-file"] }} \
+  --cluster-signing-key-file={{ params["cluster-signing-key-file"] }} \
+  --kubeconfig={{ params["kubeconfig"] }} \
+  --leader-elect=true \
+  --root-ca-file={{ params["root-ca-file"] }} \
+  --controllers={{ params["controllers"] }} \
+  --cluster-signing-cert-file={{ params["cluster-signing-cert-file"] }} \
+  --cluster-signing-key-file={{ params["cluster-signing-key-file"] }} \
+  --service-account-private-key-file={{ params["service-account-private-key-file"] }} \
+  --service-cluster-ip-range={{ params["service-cluster-ip-range"] }} \
+  --use-service-account-credentials=true \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

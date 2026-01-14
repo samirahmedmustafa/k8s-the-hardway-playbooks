@@ -6,6 +6,6 @@
   roles:
     - role: common
       tags: common
-    - role: kube-control-manager
-      tags: kube-control-manager
+    - role: kube-controller-manager
+      tags: kube-controller-manager
 

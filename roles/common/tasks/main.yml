@@ -2,4 +2,5 @@
 # tasks file for roles/common
 - import_tasks: firewall.yml
 - import_tasks: selinux.yml
+- import_tasks: hosts.yml
 

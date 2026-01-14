@@ -8,6 +8,6 @@
 - import_playbook: KUBE_SCHEDULER.yaml
   tags:
     - KUBE_SCHEDULER
-- import_playbook: KUBE_CONTROL_MANAGER.yaml
+- import_playbook: KUBE_CONTROLLER_MANAGER.yaml
   tags:
-    - KUBE_CONTROL_MANAGER
+    - KUBE_CONTROLLER_MANAGER

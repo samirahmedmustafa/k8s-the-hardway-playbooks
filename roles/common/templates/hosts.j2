@@ -5,7 +5,7 @@
 # Managed hosts from Ansible inventory
 {% for item in groups['all'] %}
 {% if hostvars[item]['ansible_host'] is defined %}
-{{ hostvars[item]['ansible_host'] }} {{ item }} {{ hostvars[item]['inventory_hostname_short'] }}
+{{ hostvars[item]['ansible_host'] }} {{ item }} 
 {% endif %}
 {% endfor %}
 

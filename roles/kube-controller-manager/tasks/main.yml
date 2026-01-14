@@ -1,0 +1,83 @@
+---
+# tasks file for roles/kube-controller-manager
+
+- name: Download binaries
+  ansible.builtin.get_url:
+    url: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+    validate_certs: false
+    mode: '0655'
+  loop: "{{ urls | dict2items }}"
+
+- name: write templates using jinja2
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
+  loop: "{{ templates }}"
+
+- name: copy cluster certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ cluster_files | dict2items }}"
+
+- name: create /var/lib/kubernetes/kube-controller-manager.kubeconfig
+  ansible.builtin.shell: |
+    kubectl config set-cluster {{ params['cluster_name'] }} \
+      --certificate-authority={{ params['root-ca-file'] }} \
+      --embed-certs=true \
+      --server=127.0.0.1:6443 \
+      --kubeconfig={{ params["kubeconfig"] }}
+
+    kubectl config set-credentials {{ params["creds"]}} \
+      --client-certificate={{ cluster_files["kube-controller-manager-cert"].dst }} \
+      --client-key={{ cluster_files["kube-controller-manager-key"].dst }} \
+      --embed-certs=true \
+      --kubeconfig={{ params["kubeconfig"] }}
+
+    kubectl config set-context default \
+      --cluster={{ params['cluster_name'] }} \
+      --user={{ params["creds"] }} \
+      --kubeconfig={{ params["kubeconfig"] }}
+    kubectl config use-context default --kubeconfig={{ params["kubeconfig"] }}
+  args:
+    creates: "{{ params['kubeconfig'] }}"
+
+- name: Start and enable service
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+    enabled: true
+    daemon-reload: yes
+
+- name: Generate bootstrap token id
+  command: openssl rand -hex 3
+  register: token_id_cmd
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+
+- name: Generate bootstrap token secret
+  command: openssl rand -hex 8
+  register: token_secret_cmd
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+
+- name: Render bootstrap token secret manifest
+  ansible.builtin.template:
+    src: templates/bootstrap-token.yaml.j2
+    dst: /var/lib/kubernetes/bootstrap-token-{{ token_id }}.yaml
+    mode: "0600"
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+
+- name: Render bootstrap token Secret
+  template:
+    src: templates/bootstrap-token.yaml.j2
+    dst: /var/lib/kubernetes/bootstrap-token-{{ hostvars['localhost'].token_id }}.yaml
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+
+- name: Apply bootstrap token Secret
+  command: kubectl apply -f /var/lib/kubernetes/bootstrap-token-{{ hostvars['localhost'].token_id }}.yaml
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+

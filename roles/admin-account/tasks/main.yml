@@ -1,0 +1,43 @@
+---
+# tasks file for roles/admin-account
+- name: copy server certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ adminaccount_files | dict2items }}"
+
+- name: create /var/lib/kubernetes/admin.kubeconfig
+  ansible.builtin.shell: |
+    kubectl config set-cluster {{ params['cluster_name'] }} \
+      --certificate-authority={{ cluster_files['client-ca-file'].dst }} \
+      --embed-certs=true \
+      --server=https://{{ hostvars[groups['LB'][0]]['ansible_host'] }}:6443 \
+      --kubeconfig={{ admin_kubeconfig }}
+
+    kubectl config set-credentials admin \
+      --client-certificate={{ adminaccount_files['admin-account-cert'].dst }} \
+      --client-key={{ adminaccount_files['admin-account-key'].dst }} \
+      --embed-certs=true \
+      --kubeconfig={{ admin_kubeconfig }}
+
+    kubectl config set-context default \
+      --cluster={{ params['cluster_name'] }} \
+      --user=admin \
+      --kubeconfig={{ admin_kubeconfig }}
+    kubectl config use-context default --kubeconfig={{ admin_kubeconfig }}
+  args:
+    creates: "{{ admin_kubeconfig }}"
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+
+- name: create .kube if not exists
+  ansible.builtin.file:
+    path: ~root/.kube
+    state: directory
+
+- name: Copy admin_kubeconfig
+  ansible.builtin.copy:
+    src: "{{ admin_kubeconfig }}"
+    dest: ~root/.kube/config
+    remote_src: true 
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+

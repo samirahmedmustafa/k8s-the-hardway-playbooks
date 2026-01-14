@@ -6,6 +6,10 @@
   roles:
     - role: common
       tags: common
+    - role: service-account
+      tags: service-account
     - role: kube-apiserver
       tags: kube-apiserver
+    - role: admin-account
+      tags: admin-account
 

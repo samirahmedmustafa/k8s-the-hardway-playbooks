@@ -1,2 +1,80 @@
 ---
 # tasks file for roles/kubelet
+---
+# tasks file for roles/kube-scheduler
+
+- name: Download binaries
+  ansible.builtin.get_url:
+    url: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+    validate_certs: false
+    mode: '0655'
+  loop: "{{ urls | dict2items }}"
+
+- name: write templates using jinja2
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
+  loop: "{{ templates }}"
+
+- name: copy cluster certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ cluster_files | dict2items }}"
+
+- name: create /var/lib/kubernetes/kube-scheduler.kubeconfig
+  ansible.builtin.shell: |
+    /usr/local/bin/kubectl config set-cluster {{ params['cluster_name'] }} \
+      --certificate-authority={{ params["ca_certs"] }} \
+      --embed-certs=true \
+      --server=127.0.0.1:6443 \
+      --kubeconfig={{ params["kubeconfig"] }}
+
+    /usr/local/bin/kubectl config set-credentials {{ params["creds"] }} \
+      --client-certificate={{ cluster_files["kube-scheduler-cert"].dst }} \
+      --client-key={{ cluster_files["kube-scheduler-key"].dst }} \
+      --embed-certs=true \
+      --kubeconfig={{ params["kubeconfig"] }}
+
+    /usr/local/bin/kubectl config set-context default \
+      --cluster={{ params['cluster_name'] }} \
+      --user={{ params["creds"] }} \
+      --kubeconfig={{ params["kubeconfig"] }}
+    /usr/local/bin/kubectl config use-context default --kubeconfig={{ params["kubeconfig"] }}
+  args:
+    creates: "{{ params['kubeconfig'] }}"
+
+- name: Read bootstrap token id from Kubernetes
+  command: >
+    kubectl -n kube-system get secrets -o jsonpath='{.items[?(@.type=="bootstrap.kubernetes.io/token")].metadata.name}'
+  register: token_secret_name
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+
+- name: Extract token id
+  set_fact:
+    token_id: "{{ token_secret_name.stdout.split('bootstrap-token-')[1] }}"
+  run_once: true
+
+- name: Read token secret value
+  command: >
+    kubectl -n kube-system get secret bootstrap-token-{{ token_id }}
+    -o jsonpath='{.data.token-secret}'
+  register: token_secret_b64
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+
+- name: Decode token secret and build full token
+  set_fact:
+    token_secret: "{{ token_secret_b64.stdout | b64decode }}"
+    full_token: "{{ token_id }}.{{ token_secret }}"
+  run_once: true
+
+- name: Start and enable service
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+    enabled: true
+    daemon-reload: yes
+
