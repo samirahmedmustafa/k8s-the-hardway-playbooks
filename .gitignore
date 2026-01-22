@@ -1,1 +1,4 @@
 roles/**/*.tar.gz
+./**/*.key
+./**/*.crt
+!collections/*
