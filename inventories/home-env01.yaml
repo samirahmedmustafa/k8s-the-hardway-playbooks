@@ -104,9 +104,13 @@ KUBE_APISERVER:
     ports:
       - 6443/tcp
     selinux_state: permissive
+    etcd_endpoints:
+      - https://192.168.1.51:2379
+      - https://192.168.1.52:2379
     pkgs:
       - wget
       - vim
+
     adminaccount_files:
       admin-account-key:
         src: files/admin.key
@@ -124,6 +128,12 @@ KUBE_APISERVER:
         dst: /var/lib/kubernetes/service-account.key 
 
     cluster_files:
+      ca-key:
+        src: files/etcd-ca.key
+        dst: /etc/etcd/etcd-ca.key
+      ca-cert:
+        src: files/etcd-ca.crt
+        dst: /etc/etcd/etcd-ca.crt
       tls-private-key-file:
         src: files/kube-apiserver.key
         dst: /var/lib/kubernetes/kube-apiserver.key
@@ -175,21 +185,19 @@ KUBE_CONTROLLER_MANAGER:
     ports: []
     selinux_state: permissive
     params:
-      kubeconfig: /var/lib/kubernetes/kube-controller-manager.kubeconfig
       cluster_name: home-cluster
       creds: system:kube-controller-manager
       cluster_cidr: 192.168.1.0/24
       service-cluster-ip-range: 10.96.0.0/12
-      cluster-signing-cert-file: /var/lib/kubernetes/ca.crt
-      cluster-signing-key-file: /var/lib/kubernetes/ca.key
+      token_file: /var/lib/kubernetes/bootstrap-token.yaml
       root-ca-file: /var/lib/kubernetes/ca.key
       cluster-signing-key-file: /var/lib/kubernetes/ca.key
       cluster-signing-cert-file: /var/lib/kubernetes/ca.crt
       service-account-private-key-file: /var/lib/kubernetes/service-account.key
       kubeconfig: /var/lib/kubernetes/kube-controller-manager.kubeconfig
       expiration: 2037-03-10T03:22:11Z
-      auth-extra-groups: system:bootstrappers:worker,system:bootstrappers:ingress
-      controllers: *,tokencleaner # *,bootstrapsigner,tokencleaner
+      auth-extra-groups: "system:bootstrappers:worker,system:bootstrappers:ingress"
+      controllers: "*,bootstrapsigner,tokencleaner" #("*,tokencleaner" | *,bootstrapsigner,tokencleaner)
     pkgs:
       - wget
       - vim
@@ -201,6 +209,9 @@ KUBE_CONTROLLER_MANAGER:
       kube-controller-manager-cert:
         src: files/kube-controller-manager.crt
         dst: /var/lib/kubernetes/kube-controller-manager.crt
+    templates:
+      - src: templates/kube-controller-manager.service.j2
+        dst: /etc/systemd/system/kube-controller-manager.service
     urls:
       kube_controller_manager:
         src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kube-controller-manager
@@ -243,54 +254,105 @@ KUBELET:
   hosts:
     worker-1:
       ansible_host: 192.168.1.53
-      host_files:
-        cert-file:
-          src: files/etcd-server1.crt
-          dst: /etc/etcd/etcd-server1.crt
-        key-file:
-          src: files/etcd-server1.key
-          dst: /etc/etcd/etcd-server1.key
-        peer-cert-file:
-          src: files/etcd-server1.crt
-          dst: /etc/etcd/etcd-server1.crt
-        peer-key-file:
-          src: files/etcd-server1.key
-          dst: /etc/etcd/etcd-server1.key
+      host_files: []
     worker-2:
       ansible_host: 192.168.1.54
-      host_files:
-        cert-file:
-          src: files/etcd-server2.crt
-          dst: /etc/etcd/etcd-server2.crt
-        key-file:
-          src: files/etcd-server2.key
-          dst: /etc/etcd/etcd-server2.key
-        peer-cert-file:
-          src: files/etcd-server2.crt
-          dst: /etc/etcd/etcd-server2.crt
-        peer-key-file:
-          src: files/etcd-server2.key
-          dst: /etc/etcd/etcd-server2.key
+      host_files: []
   vars:
     ports:
-      - 2380/tcp
-      - 2379/tcp
+      - 10250/tcp
     selinux_state: permissive
     pkgs:
       - wget
       - vim
     cluster_files:
-      ca-key:
-        src: files/etcd-ca.key
-        dst: /etc/etcd/etcd-ca.key
-      ca-cert:
-        src: files/etcd-ca.crt
-        dst: /etc/etcd/etcd-ca.crt
+      client-ca-file:
+        src: files/ca.crt
+        dst: /var/lib/kubernetes/ca.crt
+      kubelet-key:
+        src: files/kubelet.key
+        dst: /var/lib/kubernetes/kubelet.key
+      kubelet-cert:
+        src: files/kubelet.crt
+        dst: /var/lib/kubernetes/kubelet.crt
+    params:
+      kubeconfig: /var/lib/kubernetes/kubeconfig
+      config: /var/lib/kubernetes/config.yaml
+      bootstrap-kubeconfig: /var/lib/kubernetes/bootstrap-kubeconfig
+      cluster_name: home-cluster
+      resolvConf: /etc/resolv_k8s.conf
+      ca_certs: /var/lib/kubernetes/ca.crt
+      creds: system:kube-scheduler
+    urls:
+      kubelet:
+        - src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kubelet
+          dst: /usr/local/bin/kubelet
+        - src: https://github.com/containerd/containerd/releases/download/v2.2.1/containerd-2.2.1-linux-amd64.tar.gz
+          dst: /usr/local/bin/
+        - src: https://github.com/opencontainers/runc/releases/download/v1.4.0/runc.amd64      
+          dst: /usr/local/sbin/runc
+    templates:
+      - src: templates/kubelet.service.j2
+        dst: /etc/systemd/system/kubelet.service
+      - src: templates/containerd.service.j2
+        dst: /etc/systemd/system/containerd.service
+    service_name:
+      - containerd
+      - kubelet
 all:
   vars:
     common:
+      pkgs:
+        - tar
+        - wget
+        - vim
+
+      templates:
+        - src: templates/hosts.j2
+          dst: /etc/hosts
+
+      filebeat:
+        app_base_dir: /opt/filebeat
+        service: filebeat
+        compressed: files/filebeat-9.2.4-linux-x86_64.tar.gz
         templates:
-          - src: templates/hosts.j2
-            dst: /etc/hosts
-  
- 
+          - src: templates/filebeat.service.j2
+            dst: /etc/systemd/system/filebeat.service
+
+        sys_groups:
+          filebeat:
+            name: filebeat
+
+        sys_users:
+          filebeat:
+            name: filebeat
+            shell: /sbin/nologin
+            groups: filebeat
+
+        conf_files_perm:
+          filebeat:
+            path: /opt/filebeat/filebeat.yml
+            mode: "0640"
+
+        filebeat_regex:
+          path: /opt/filebeat/filebeat.yml
+          regex:
+            - old: "localhost:9200"
+              new: "192.168.1.11:9200"
+            - old: '#username: "elastic"'
+              new: 'username: "elastic"'
+            - old: '#password: "changeme"'
+              new: 'password: "changeme"'
+            - old: '^#- type: journald'
+              new: '- type: journald'
+            - old: '^#- type: journald'
+              new: '- type: journald'
+            - old: '#id: my-journald-id'
+              new: 'id: my-journald-id'
+            - old: '#seek: head'
+              new: 'seek: tail'
+            - old: 'path: \${path.config}/modules.d/\*.yml'
+              new: '#path: \${path.config}/modules.d/\*.yml'
+            - old: '#logging.level: debug'
+              new: 'logging.level: warning' 
+

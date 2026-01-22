@@ -1,11 +1,15 @@
 ---
-- hosts: KUBE_CONTROL_MANAGER
+- hosts: KUBE_CONTROLLER_MANAGER
   become: yes
   gather_facts: false
 
   roles:
     - role: common
       tags: common
+    - role: users
+      tags: users
+    - role: filebeat
+      tags: filebeat
     - role: kube-controller-manager
       tags: kube-controller-manager
 

@@ -6,6 +6,6 @@
   roles:
     - role: common
       tags: common
-    - role: etcd
-      tags: etcd
+    - role: kubelet
+      tags: kubelet
 

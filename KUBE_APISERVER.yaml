@@ -6,6 +6,10 @@
   roles:
     - role: common
       tags: common
+    - role: users
+      tags: users
+    - role: filebeat
+      tags: filebeat
     - role: service-account
       tags: service-account
     - role: kube-apiserver

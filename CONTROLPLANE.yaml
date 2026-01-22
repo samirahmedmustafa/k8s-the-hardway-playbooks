@@ -11,3 +11,6 @@
 - import_playbook: KUBE_CONTROLLER_MANAGER.yaml
   tags:
     - KUBE_CONTROLLER_MANAGER
+- import_playbook: KUBELET.yaml
+  tags:
+    - KUBELET

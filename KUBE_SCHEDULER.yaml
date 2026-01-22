@@ -6,6 +6,10 @@
   roles:
     - role: common
       tags: common
+    - role: users
+      tags: users
+    - role: filebeat
+      tags: filebeat
     - role: kube-scheduler
       tags: kube-scheduler
 

@@ -14,6 +14,7 @@
     src: "{{ item.src }}"
     dest: "{{ item.dst }}"
   loop: "{{ templates }}"
+  notify: restart_controller_manager
 
 - name: copy cluster certs
   ansible.builtin.copy:
@@ -50,34 +51,44 @@
     enabled: true
     daemon-reload: yes
 
-- name: Generate bootstrap token id
-  command: openssl rand -hex 3
-  register: token_id_cmd
+- name: Check if file exists
+  ansible.builtin.stat:
+    path: "{{ params['token_file'] }}"
+  register: token_file_check
+
+- name: Set variable if file exists
+  ansible.builtin.set_fact:
+    token_file_exists: "{{ token_file_check.stat.exists }}"
+
+- name: create bootstrap token config
+  block:
+    - name: Generate bootstrap token id
+      command: openssl rand -hex 3
+      register: token_id
+      changed_when: false
+    
+    - name: Generate bootstrap token secret
+      command: openssl rand -hex 8
+      register: token_secret
+      changed_when: false
+    
+    - name: Set bootstrap token facts
+      set_fact:
+        token_id: "{{ token_id.stdout }}"
+        token_secret: "{{ token_secret.stdout }}"
+        full_token: "{{ token_id.stdout }}.{{ token_secret.stdout }}"
+    
+    - name: Render bootstrap token secret
+      template:
+        src: templates/bootstrap-token.yaml.j2
+        dest: "{{ params['token_file'] }}"
+
+    - name: Apply bootstrap token secret
+      command: "kubectl apply -f {{ params['token_file'] }}"
+
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
   run_once: true
+  when: token_file_exists == False
 
-- name: Generate bootstrap token secret
-  command: openssl rand -hex 8
-  register: token_secret_cmd
-  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
-  run_once: true
 
-- name: Render bootstrap token secret manifest
-  ansible.builtin.template:
-    src: templates/bootstrap-token.yaml.j2
-    dst: /var/lib/kubernetes/bootstrap-token-{{ token_id }}.yaml
-    mode: "0600"
-  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
-
-- name: Render bootstrap token Secret
-  template:
-    src: templates/bootstrap-token.yaml.j2
-    dst: /var/lib/kubernetes/bootstrap-token-{{ hostvars['localhost'].token_id }}.yaml
-  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
-  run_once: true
-
-- name: Apply bootstrap token Secret
-  command: kubectl apply -f /var/lib/kubernetes/bootstrap-token-{{ hostvars['localhost'].token_id }}.yaml
-  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
-  run_once: true
 

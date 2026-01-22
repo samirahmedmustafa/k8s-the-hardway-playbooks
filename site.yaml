@@ -2,3 +2,5 @@
 - import_playbook: LB.yaml
 - import_playbook: CONTROLPLANE.yaml
 - import_playbook: NODE.yaml
+- import_playbook: CONTROLPLANE_NETWORK.yaml
+

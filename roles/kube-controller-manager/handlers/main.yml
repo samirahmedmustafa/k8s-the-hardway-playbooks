@@ -1,2 +1,13 @@
 ---
 # handlers file for roles/kube-controller-manager
+- name: Reload service in all cases
+  command: systemctl daemon-reload
+  listen: restart_controller_manager
+
+- name: restart kube-controller-manager
+  ansible.builtin.service:
+    name: "{{ service_name }}"
+    state: restarted
+    enabled: true
+  listen: restart_controller_manager
+

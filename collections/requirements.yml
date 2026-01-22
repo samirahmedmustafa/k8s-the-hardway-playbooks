@@ -1,3 +1,5 @@
 collections:
 - name: ansible-posix-2.1.0.tar.gz
   version: 2.1.0
+- name: kubernetes-core-6.2.0.tar.gz
+  version: 6.2.0

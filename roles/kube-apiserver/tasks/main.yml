@@ -25,13 +25,35 @@
   ansible.builtin.copy:
     src: "{{ item.value.src }}"
     dest: "{{ item.value.dst }}"
+    mode: '0644'
   loop: "{{ cluster_files | dict2items }}"
 
 - name: copy server certs
   ansible.builtin.copy:
     src: "{{ item.value.src }}"
     dest: "{{ item.value.dst }}"
+    mode: '0644'
   loop: "{{ host_files | dict2items }}"
+
+- name: wait for etcd to be healthy
+  command: >
+    /usr/local/bin/etcdctl --endpoints={{ etcd_endpoints | join(',') }}
+    --cacert={{ cluster_files['ca-cert'].dst }}
+    --cert={{ host_files['etcd-certfile'].dst }}
+    --key={{ host_files['etcd-keyfile'].dst }}
+    endpoint health
+  register: etcd_health
+  retries: 10
+  delay: 3
+  until: "'is healthy' in etcd_health.stdout"
+
+- name: validate TLS handshake to etcd
+  shell: |
+    openssl s_client -connect {{ item | regex_replace('https://', '') }} \
+    -cert {{ host_files['etcd-certfile'].dst }} \
+    -key {{ host_files['etcd-keyfile'].dst }} \
+    -CAfile {{ cluster_files['ca-cert'].dst }} < /dev/null
+  loop: "{{ etcd_endpoints }}"
 
 - name: Start and enable service
   systemd:
