@@ -1,0 +1,6 @@
+---
+- name: Install pkgs
+  ansible.builtin.dnf:
+    name: "{{ common.pkgs }}"
+    state: present
+

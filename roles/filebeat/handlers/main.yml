@@ -1,0 +1,13 @@
+---
+# handlers file for roles/filebeat
+- name: Reload service in all cases
+  command: systemctl daemon-reload
+  listen: restart_service
+
+- name: restart service
+  ansible.builtin.service:
+    name: "{{ common.filebeat.service }}"
+    state: restarted
+    enabled: true
+  listen: restart_service
+

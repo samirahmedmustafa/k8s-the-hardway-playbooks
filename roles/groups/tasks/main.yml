@@ -1,0 +1,8 @@
+---
+# tasks file for roles/groups
+- name: Ensure groups exists with correct gid [groups]
+  ansible.builtin.group:
+    name: "{{ item.value.name }}"
+    state: present
+  loop: "{{ vars.common.filebeat.sys_groups | dict2items }}"
+

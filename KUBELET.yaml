@@ -1,0 +1,15 @@
+---
+- hosts: KUBELET
+  become: yes
+  gather_facts: false
+
+  roles:
+    - role: common
+      tags: common
+    - role: users
+      tags: users
+    - role: filebeat
+      tags: filebeat
+    - role: kubelet
+      tags: kubelet
+

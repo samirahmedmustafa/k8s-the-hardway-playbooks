@@ -1,0 +1,9 @@
+---
+# tasks file for roles/users
+- name: Add the users
+  ansible.builtin.user:
+    name: "{{ item.value.name }}"
+    shell: "{{ item.value.shell }}"
+    groups: "{{ item.value.groups }}"
+  loop: "{{ vars.common.filebeat.sys_users | dict2items }}"
+

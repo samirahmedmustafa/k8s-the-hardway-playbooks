@@ -1,4 +1,5 @@
 roles/**/*.tar.gz
-./**/*.key
-./**/*.crt
+roles/**/*.key
+roles/**/*.crt
+roles/**/*.cnf
 !collections/*
