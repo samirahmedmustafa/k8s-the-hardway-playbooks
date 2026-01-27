@@ -7,22 +7,22 @@ Installation steps:
 
 Execute all playbooks in the below order
 
-1. Deploy loadbalancer, kubeconfig accounts, kube-apiserver, kube-scheduler, kube-controller-manager
+1. Deploy loadbalancer, kubeconfig accounts, kube-apiserver, kube-scheduler, kube-controller-manager and kubelet
 ```
 	ansible-playbook -i inventories/home-env01.yaml site.yaml
 ```
 
-2. Deploy cilium for network
+2. Approve pending CSRs
+```
+	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags csr
+```
+
+3. Deploy cilium for network
 ```
 	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags cilium
 ```
 
-3. Deploy the coredns
+4. Deploy the coredns
 ```
 	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags coredns
-```
-
-4. Approve pending CSRs
-```
-	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags csr
 ```
