@@ -21,3 +21,8 @@ Execute all playbooks in the below order
 ```
 	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags coredns
 ```
+
+4. Approve pending CSRs
+```
+	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags csr
+```
