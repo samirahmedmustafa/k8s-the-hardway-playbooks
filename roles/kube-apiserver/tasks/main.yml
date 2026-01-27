@@ -57,19 +57,3 @@
     enabled: true
     daemon-reload: yes
 
-- name: test kube-apiserver-to-kubelet permissions
-  command: >
-    /usr/local/bin/kubectl auth can-i get nodes/proxy --as kube-apiserver 
-  register: auth
-  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
-  ignore_errors: true
-  failed_when: auth.rc == 5
-  run_once: true
-
-- name: create cluster role binding kube-apiserver-to-kubelet
-  command: >
-    /usr/local/bin/kubectl create clusterrolebinding kube-apiserver-to-kubelet --clusterrole=system:kubelet-api-admin --user=kube-apiserver
-  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
-  run_once: true
-  when: "auth.stdout == 'no'"
-

@@ -134,6 +134,8 @@ KUBE_APISERVER:
         dst: /var/lib/kubernetes/admin.crt
 
     admin_kubeconfig: /var/lib/kubernetes/admin.kubeconfig
+      #    kubeconfigs:
+      #      api-proxier:
 
     serviceaccount:
       service-account-cert:
@@ -191,6 +193,7 @@ KUBE_APISERVER:
     templates:
       - src: templates/kube-apiserver.service.j2
         dst: /etc/systemd/system/kube-apiserver.service
+
 KUBE_SCHEDULER:
   hosts:
     kube-scheduler-1:
