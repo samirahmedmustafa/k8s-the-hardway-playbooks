@@ -127,16 +127,16 @@
         dest: "{{ params['token_file'] }}"
 
     - name: Apply bootstrap token secret
-      command: "/usr/local/bin/kubectl apply -f {{ params['token_file'] }}"
+      command: "/usr/local/bin/kubectl apply -f {{ params['token_file'] }} --kubeconfig /var/lib/kubernetes/admin.kubeconfig"
       loop: "{{ bootstrap_templates }}"
 
     - name: Apply bootstrap approval role bindings
-      command: "/usr/local/bin/kubectl apply -f {{ item.dst }}"
+      command: "/usr/local/bin/kubectl apply -f {{ item.dst }} --kubeconfig /var/lib/kubernetes/admin.kubeconfig"
       loop: "{{ bootstrap_templates }}"
 
-    - name: Apply all pending certificates
-      command: "/usr/local/bin/kubectl kubectl certificate approve $(/usr/local/bin/kubectl get csr -o name)"
-      loop: "{{ bootstrap_templates }}"
+        #- name: Apply all pending certificates
+        #  command: "/usr/local/bin/kubectl certificate approve $(/usr/local/bin/kubectl get csr -o name) --kubeconfig /var/lib/kubernetes/admin.kubeconfig"
+        #  loop: "{{ bootstrap_templates }}"
 
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
   run_once: true

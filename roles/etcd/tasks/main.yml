@@ -32,6 +32,13 @@
     dest: "{{ item.value.dst }}"
   loop: "{{ host_files | dict2items }}"
 
+- name: Start and enable service
+  systemd:
+    name: "{{ service_name }}"
+    state: started
+    enabled: true
+    daemon-reload: yes
+
 - name: validate TLS handshake to etcd
   shell: |
     openssl s_client -connect {{ item | regex_replace('https://', '') }} \
@@ -40,10 +47,5 @@
     -CAfile {{ cluster_files['etcdca-cert'].dst }} < /dev/null
   loop: "{{ etcd_endpoints }}"
 
-- name: Start and enable service
-  systemd:
-    name: "{{ service_name }}"
-    state: started
-    enabled: true
-    daemon-reload: yes
+
 

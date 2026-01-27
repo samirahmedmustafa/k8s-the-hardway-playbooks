@@ -12,33 +12,50 @@
     dest: "{{ execs.kubectl.dst }}"
     mode: 0655
 
+- name: copy CA cert
+  ansible.builtin.copy:
+    src: "{{ cluster_files['ca-cert'].src }}"
+    dest: "{{ cluster_files['ca-cert'].dst }}"
+
 - name: copy server certs
   ansible.builtin.copy:
     src: "{{ item.value.src }}"
     dest: "{{ item.value.dst }}"
   loop: "{{ adminaccount | dict2items }}"
 
-- name: create /var/lib/kubernetes/admin.kubeconfig
-  ansible.builtin.shell: |
-    /usr/local/bin/kubectl config set-cluster {{ params['cluster_name'] }} \
-      --certificate-authority={{ cluster_files['ca-cert'].dst }} \
-      --embed-certs=true \
-      --server=https://{{ hostvars[groups['LB'][0]]['ansible_host'] }}:{{ kube_apiserver_port }} \
-      --kubeconfig={{ admin_kubeconfig }}
+- name: Configure admin kubeconfig - cluster
+  command: >
+    /usr/local/bin/kubectl config set-cluster {{ params['cluster_name'] }}
+    --certificate-authority={{ cluster_files['ca-cert'].dst }}
+    --embed-certs=true
+    --server=https://{{ hostvars[groups['LB'][0]]['ansible_host'] }}:{{ kube_apiserver_port }}
+    --kubeconfig={{ admin_kubeconfig }}
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
 
-    /usr/local/bin/kubectl config set-credentials admin \
-      --client-certificate={{ adminaccount['admin-account-cert'].dst }} \
-      --client-key={{ adminaccount['admin-account-key'].dst }} \
-      --embed-certs=true \
-      --kubeconfig={{ admin_kubeconfig }}
+- name: Configure admin kubeconfig - credentials
+  command: >
+    /usr/local/bin/kubectl config set-credentials admin
+    --client-certificate={{ adminaccount['admin-account-cert'].dst }}
+    --client-key={{ adminaccount['admin-account-key'].dst }}
+    --embed-certs=true
+    --kubeconfig={{ admin_kubeconfig }}
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
 
-    /usr/local/bin/kubectl config set-context default \
-      --cluster={{ params['cluster_name'] }} \
-      --user=admin \
-      --kubeconfig={{ admin_kubeconfig }}
-    /usr/local/bin/kubectl config use-context default --kubeconfig={{ admin_kubeconfig }}
-  args:
-    creates: "{{ admin_kubeconfig }}"
+- name: Configure admin kubeconfig - context
+  command: >
+    /usr/local/bin/kubectl config set-context default
+    --cluster={{ params['cluster_name'] }}
+    --user=admin
+    --kubeconfig={{ admin_kubeconfig }}
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+
+- name: Use admin context
+  command: >
+    /usr/local/bin/kubectl config use-context default
+    --kubeconfig={{ admin_kubeconfig }}
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
   run_once: true
 

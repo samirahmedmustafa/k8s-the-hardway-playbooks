@@ -23,5 +23,9 @@
     - role: coredns
       tags:
         - coredns
-        - coredns
+        - never
+    - role: csr
+      tags:
+        - csr
+        - never
 
