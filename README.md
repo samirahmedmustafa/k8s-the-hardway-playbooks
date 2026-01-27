@@ -19,9 +19,9 @@ Execute all playbooks in the below order
 ```
 
 3. Deploy cilium for network
-```
+	```
 	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags cilium
-```
+	```
 	- Wait till nodes become ready
 	```
 		/usr/local/bin/kubectl get node
