@@ -2,6 +2,7 @@
 
 - I'm keeping the certificates in the repository to make testing easier(in case you don't want to generate the certs yourself) they are valid certificates as of before 2037
 - I kept the compressed packages as download takes time and ansible collection for download has some python upgrade requirements
+- I have filebeats agents installation as I wanted to have the log in a centralized location, you can deploy it by filebeat tag and and updating the ELK elasticsearch creds 
 
 Installation steps:
 
