@@ -10,8 +10,8 @@
 	    <tr><td>lb</td><td>192.168.1.50</td></tr>
 	    <tr><td>master-1</td><td>192.168.1.51</td></tr>
 	    <tr><td>master-2</td><td>192.168.1.52</td></tr>
-	    <tr><td>woker-1</td><td>192.168.1.53</td></tr>
-	    <tr><td>woerk-2</td><td>192.168.1.54</td></tr>
+	    <tr><td>worker-1</td><td>192.168.1.53</td></tr>
+	    <tr><td>worker-2</td><td>192.168.1.54</td></tr>
 	</table
 
 Installation steps:
