@@ -1,0 +1,45 @@
+---
+filebeat.inputs:
+- type: filestream
+  id: {{ inventory_hostname }}-filestream-id
+  enabled: false
+  paths:
+    - /var/log/*.log
+- type: journald
+  id: {{ inventory_hostname }}-journald-id
+  seek: tail
+filebeat.config.modules:
+  reload.enabled: false
+setup.template.settings:
+  index.number_of_shards: 1
+setup.kibana:
+output.elasticsearch:
+  hosts:
+  - "{{ common.filebeat.elasticsearch_ip }}"
+  preset: balanced
+  username: "elastic"
+  password: "changeme"
+processors:
+  - drop_event:
+      when:
+        not:
+          has_fields: ["journald.custom"]
+
+  - drop_event:
+      when:
+        range:
+          journald.priority:
+            gt: 4
+
+            #- rename:
+            #    fields:
+            #      - from: "journald.message"
+            #        to: "message"
+            #    ignore_missing: true
+
+  - add_host_metadata:
+      when.not.contains.tags: forwarded
+  - add_cloud_metadata: ~
+  - add_docker_metadata: ~
+  - add_kubernetes_metadata: ~
+

@@ -1,5 +1,0 @@
-roles/**/*.tar.gz
-roles/**/*.key
-roles/**/*.crt
-roles/**/*.cnf
-!collections/*

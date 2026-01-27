@@ -1,7 +1,4 @@
 ---
-- import_playbook: ETCD.yaml
-  tags:
-    - ETCD
 - import_playbook: KUBE_APISERVER.yaml
   tags:
     - KUBE_APISERVER

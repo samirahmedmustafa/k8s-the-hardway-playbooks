@@ -18,19 +18,13 @@
     mode: "{{ item.value.mode }}"
   loop: "{{ vars.common.filebeat.conf_files_perm | dict2items }}"
 
-- name: setting conf params
-  ansible.builtin.replace:
-    path: "{{ vars.common.filebeat.filebeat_regex.path }}"
-    regexp: "{{ item.old }}"
-    replace: "{{ item.new }}"
-  loop: "{{ vars.common.filebeat.filebeat_regex.regex }}"
-  notify: restart_service
-
 - name: copying templates
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ item.dst }}"
+    group: filebeat
   loop: "{{ vars.common.filebeat.templates }}"
+  notify: restart_service
 
 - name: Add filebeat user to systemd-journal group
   user:

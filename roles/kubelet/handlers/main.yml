@@ -4,11 +4,11 @@
   command: systemctl daemon-reload
   listen: restart_kubelet
 
-- name: restart kube-controller-manager
+- name: restart service
   ansible.builtin.service:
     name: "{{ item }}"
     state: restarted
     enabled: true
-  loop: "{{ service_name }}"
   listen: restart_kubelet
+  loop: "{{ kubelet['service_name'] }}"
 

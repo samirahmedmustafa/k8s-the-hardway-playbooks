@@ -5,12 +5,12 @@ Documentation=https://github.com/coreos
 [Service]
 ExecStart=/usr/local/bin/etcd \
   --name {{ inventory_hostname }} \
-  --cert-file={{ host_files["cert-file"].dst }} \
-  --key-file={{ host_files["key-file"].dst }} \
-  --peer-cert-file={{ host_files["peer-cert-file"].dst }} \
-  --peer-key-file={{ host_files["peer-key-file"].dst }} \
-  --trusted-ca-file={{ cluster_files["trusted-ca-file"].dst }} \
-  --peer-trusted-ca-file={{ cluster_files["peer-trusted-ca-file"].dst }} \
+  --cert-file={{ host_files["etcdserver-cert"].dst }} \
+  --key-file={{ host_files["etcdserver-key"].dst }} \
+  --peer-cert-file={{ host_files["etcdserver-peer-cert"].dst }} \
+  --peer-key-file={{ host_files["etcdserver-peer-key"].dst }} \
+  --trusted-ca-file={{ cluster_files["etcdca-cert"].dst }} \
+  --peer-trusted-ca-file={{ cluster_files["etcdca-cert"].dst }} \
   --peer-client-cert-auth \
   --client-cert-auth \
   --initial-advertise-peer-urls https://{{ ansible_host }}:2380 \

@@ -21,54 +21,58 @@ ETCD:
     etcd-server1:
       ansible_host: 192.168.1.51
       host_files:
-        cert-file:
+        etcdserver-cert:
           src: files/etcd-server1.crt
           dst: /etc/etcd/etcd-server1.crt
-        key-file:
+        etcdserver-key:
           src: files/etcd-server1.key
           dst: /etc/etcd/etcd-server1.key
-        peer-cert-file:
+        etcdserver-peer-cert:
           src: files/etcd-server1.crt
           dst: /etc/etcd/etcd-server1.crt
-        peer-key-file:
+        etcdserver-peer-key:
           src: files/etcd-server1.key
           dst: /etc/etcd/etcd-server1.key
     etcd-server2:
       ansible_host: 192.168.1.52
       host_files:
-        cert-file:
+        etcdserver-cert:
           src: files/etcd-server2.crt
           dst: /etc/etcd/etcd-server2.crt
-        key-file:
+        etcdserver-key:
           src: files/etcd-server2.key
           dst: /etc/etcd/etcd-server2.key
-        peer-cert-file:
+        etcdserver-peer-cert:
           src: files/etcd-server2.crt
           dst: /etc/etcd/etcd-server2.crt
-        peer-key-file:
+        etcdserver-peer-key:
           src: files/etcd-server2.key
           dst: /etc/etcd/etcd-server2.key
   vars:
     ports:
       - 2380/tcp
       - 2379/tcp
+
     selinux_state: permissive
     pkgs:
       - wget
       - vim
+
+    etcd_endpoints:
+      - https://192.168.1.51:2379
+      - https://192.168.1.52:2379
+
     cluster_files:
-      ca-key:
+      etcdca-key:
         src: files/etcd-ca.key
         dst: /etc/etcd/etcd-ca.key
-      ca-cert:
+      etcdca-cert:
         src: files/etcd-ca.crt
         dst: /etc/etcd/etcd-ca.crt
-      trusted-ca-file:
-        src: files/etcd-ca.crt
-        dst: /etc/etcd/etcd-ca.crt
-      peer-trusted-ca-file:
-        src: files/etcd-ca.crt
-        dst: /etc/etcd/etcd-ca.crt
+    files:
+      etcd:
+        src: etcd-v3.6.7-linux-amd64.tar.gz
+        dst: /usr/local/bin
     urls:
       etcd:
         src: https://github.com/etcd-io/etcd/releases/download/v3.6.7/etcd-v3.6.7-linux-amd64.tar.gz
@@ -85,76 +89,81 @@ KUBE_APISERVER:
     master-1:
       ansible_host: 192.168.1.51
       host_files:
-        etcd-keyfile:
+        etcdserver-key:
           src: files/etcd-server1.key
           dst: /var/lib/kubernetes/etcd-server1.key
-        etcd-certfile:
+        etcdserver-cert:
           src: files/etcd-server1.crt
           dst: /var/lib/kubernetes/etcd-server1.crt
     master-2:
       ansible_host: 192.168.1.52
       host_files:
-        etcd-keyfile:
+        etcdserver-key:
           src: files/etcd-server2.key
           dst: /var/lib/kubernetes/etcd-server2.key
-        etcd-certfile:
+        etcdserver-cert:
           src: files/etcd-server2.crt
           dst: /var/lib/kubernetes/etcd-server2.crt
   vars:
     ports:
       - 6443/tcp
+      - 4244/tcp
+      - 8472/udp
+      - 53/tcp
+      - 53/udp
     selinux_state: permissive
+    kube_apiserver_endpoints:
+      - https://192.168.1.51:6443
+      - https://192.168.1.52:6443
     etcd_endpoints:
       - https://192.168.1.51:2379
       - https://192.168.1.52:2379
     pkgs:
+      - openssl
       - wget
       - vim
 
-    adminaccount_files:
+    kube_apiserver_port: 6443
+
+    adminaccount:
       admin-account-key:
         src: files/admin.key
         dst: /var/lib/kubernetes/admin.key
       admin-account-cert:
         src: files/admin.crt
         dst: /var/lib/kubernetes/admin.crt
+
     admin_kubeconfig: /var/lib/kubernetes/admin.kubeconfig
-    serviceaccount_files:
-      service-account-key-file:
+
+    serviceaccount:
+      service-account-cert:
         src: files/service-account.crt
         dst: /var/lib/kubernetes/service-account.crt
-      service-account-signing-key-file:
+      service-account-key:
         src: files/service-account.key 
         dst: /var/lib/kubernetes/service-account.key 
 
-    cluster_files:
-      ca-key:
+    etcd:
+      etcdca-key:
         src: files/etcd-ca.key
         dst: /etc/etcd/etcd-ca.key
-      ca-cert:
+      etcdca-cert:
         src: files/etcd-ca.crt
         dst: /etc/etcd/etcd-ca.crt
-      tls-private-key-file:
+
+    cluster_files:
+      kube-apiserver-key:
         src: files/kube-apiserver.key
         dst: /var/lib/kubernetes/kube-apiserver.key
-      tls-cert-file:
+      kube-apiserver-cert:
         src: files/kube-apiserver.crt
         dst: /var/lib/kubernetes/kube-apiserver.crt
-      client-ca-file:
+      ca-cert:
         src: files/ca.crt
         dst: /var/lib/kubernetes/ca.crt
-      kubelet-client-key:
-        src: files/kube-apiserver.key
-        dst: /var/lib/kubernetes/kube-apiserver.key
-      kubelet-client-certificate:
-        src: files/kube-apiserver.crt
-        dst: /var/lib/kubernetes/kube-apiserver.crt
-      kubelet-certificate-authority:
-        src: files/ca.crt
-        dst: /var/lib/kubernetes/ca.crt
-      etcd-cafile:
-        src: files/etcd-ca.crt
-        dst: /var/lib/kubernetes/etcd-ca.crt
+      ca-key:
+        src: files/ca.key
+        dst: /var/lib/kubernetes/ca.key
       encryption-provider-config:
         src: files/encryption-config.yaml
         dst: /var/lib/kubernetes/encryption-config.yaml
@@ -172,51 +181,16 @@ KUBE_APISERVER:
     service_name: kube-apiserver
     dirs:
       data_dir: /var/lib/kubernetes
+    execs:
+      kube-apiserver:
+        src: kube-apiserver
+        dst: /usr/local/bin
+      kubectl:
+        src: kubectl
+        dst: /usr/local/bin
     templates:
       - src: templates/kube-apiserver.service.j2
-        dst: /etc/systemd/system/kube-api.service
-KUBE_CONTROLLER_MANAGER:
-  hosts:
-    kube-controller-manager-1:
-      ansible_host: 192.168.1.51
-    kube-controller-manager-2:
-      ansible_host: 192.168.1.52
-  vars:
-    ports: []
-    selinux_state: permissive
-    params:
-      cluster_name: home-cluster
-      creds: system:kube-controller-manager
-      cluster_cidr: 192.168.1.0/24
-      service-cluster-ip-range: 10.96.0.0/12
-      token_file: /var/lib/kubernetes/bootstrap-token.yaml
-      root-ca-file: /var/lib/kubernetes/ca.key
-      cluster-signing-key-file: /var/lib/kubernetes/ca.key
-      cluster-signing-cert-file: /var/lib/kubernetes/ca.crt
-      service-account-private-key-file: /var/lib/kubernetes/service-account.key
-      kubeconfig: /var/lib/kubernetes/kube-controller-manager.kubeconfig
-      expiration: 2037-03-10T03:22:11Z
-      auth-extra-groups: "system:bootstrappers:worker,system:bootstrappers:ingress"
-      controllers: "*,bootstrapsigner,tokencleaner" #("*,tokencleaner" | *,bootstrapsigner,tokencleaner)
-    pkgs:
-      - wget
-      - vim
-
-    cluster_files:
-      kube-controller-manager-key:
-        src: files/kube-controller-manager.key
-        dst: /var/lib/kubernetes/kube-controller-manager.key
-      kube-controller-manager-cert:
-        src: files/kube-controller-manager.crt
-        dst: /var/lib/kubernetes/kube-controller-manager.crt
-    templates:
-      - src: templates/kube-controller-manager.service.j2
-        dst: /etc/systemd/system/kube-controller-manager.service
-    urls:
-      kube_controller_manager:
-        src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kube-controller-manager
-        dst: /usr/local/bin/kube-controller-manager
-    service_name: kube-controller-manager
+        dst: /etc/systemd/system/kube-apiserver.service
 KUBE_SCHEDULER:
   hosts:
     kube-scheduler-1:
@@ -249,63 +223,180 @@ KUBE_SCHEDULER:
       kube_scheduler:
         src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kube-scheduler
         dst: /usr/local/bin/kube-scheduler
+    dirs:
+      data_dir: /var/lib/kubernetes
+    execs:
+      kube-scheduler:
+        src: kube-scheduler
+        dst: /usr/local/bin
     service_name: kube-scheduler
+KUBE_CONTROLLER_MANAGER:
+  hosts:
+    kube-controller-manager-1:
+      ansible_host: 192.168.1.51
+    kube-controller-manager-2:
+      ansible_host: 192.168.1.52
+  vars:
+    ports: []
+    selinux_state: permissive
+
+    serviceaccount:
+      service-account-cert:
+        src: files/service-account.crt
+        dst: /var/lib/kubernetes/service-account.crt
+      service-account-key:
+        src: files/service-account.key 
+        dst: /var/lib/kubernetes/service-account.key 
+
+    params:
+      cluster_name: home-cluster
+      creds: system:kube-controller-manager
+      cluster_cidr: 192.168.1.0/24
+      service-cluster-ip-range: 10.96.0.0/12
+      token_file: /var/lib/kubernetes/bootstrap-token.yaml
+      kubeconfig: /var/lib/kubernetes/kube-controller-manager.kubeconfig
+      expiration: "2037-03-10T03:22:11Z"
+      auth-extra-groups: "system:bootstrappers:worker,system:bootstrappers:ingress"
+      controllers: "*,bootstrapsigner,tokencleaner" #("*,tokencleaner" | *,bootstrapsigner,tokencleaner)
+    pkgs:
+      - wget
+      - vim
+
+    cluster_files:
+      ca-cert:
+        src: files/ca.crt
+        dst: /var/lib/kubernetes/ca.crt
+      ca-key:
+        src: files/ca.key
+        dst: /var/lib/kubernetes/ca.key
+      kube-controller-manager-key:
+        src: files/kube-controller-manager.key
+        dst: /var/lib/kubernetes/kube-controller-manager.key
+      kube-controller-manager-cert:
+        src: files/kube-controller-manager.crt
+        dst: /var/lib/kubernetes/kube-controller-manager.crt
+    templates:
+      - src: templates/kube-controller-manager.service.j2
+        dst: /etc/systemd/system/kube-controller-manager.service
+    bootstrap_templates:
+      - src: templates/create_csrs_for_bootstrapping.yaml.j2
+        dst: /var/lib/kubernetes/create_csrs_for_bootstrapping.yaml
+      - src: templates/auto_approve_csrs.yaml.j2
+        dst: /var/lib/kubernetes/auto_approve_csrs.yaml
+      - src: templates/auto_approve_renewals.yaml.j2
+        dst: /var/lib/kubernetes/auto_approve_renewals.yaml
+    dirs:
+      data_dir: /var/lib/kubernetes
+    urls:
+      kube_controller_manager:
+        src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kube-controller-manager
+        dst: /usr/local/bin/kube-controller-manager
+    execs:
+      - src: kube-controller-manager
+        dst: /usr/local/bin
+    service_name: kube-controller-manager
 KUBELET:
   hosts:
     worker-1:
       ansible_host: 192.168.1.53
-      host_files: []
     worker-2:
       ansible_host: 192.168.1.54
-      host_files: []
   vars:
     ports:
       - 10250/tcp
+      - 4244/tcp
+      - 8472/udp
+      - 53/tcp
+      - 53/udp
     selinux_state: permissive
     pkgs:
       - wget
       - vim
-    cluster_files:
-      client-ca-file:
-        src: files/ca.crt
-        dst: /var/lib/kubernetes/ca.crt
-      kubelet-key:
-        src: files/kubelet.key
-        dst: /var/lib/kubernetes/kubelet.key
-      kubelet-cert:
-        src: files/kubelet.crt
-        dst: /var/lib/kubernetes/kubelet.crt
-    params:
-      kubeconfig: /var/lib/kubernetes/kubeconfig
-      config: /var/lib/kubernetes/config.yaml
-      bootstrap-kubeconfig: /var/lib/kubernetes/bootstrap-kubeconfig
-      cluster_name: home-cluster
-      resolvConf: /etc/resolv_k8s.conf
-      ca_certs: /var/lib/kubernetes/ca.crt
-      creds: system:kube-scheduler
-    urls:
-      kubelet:
-        - src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kubelet
-          dst: /usr/local/bin/kubelet
-        - src: https://github.com/containerd/containerd/releases/download/v2.2.1/containerd-2.2.1-linux-amd64.tar.gz
+
+    coredns:
+      templates:
+        - src: files/coredns.yaml.j2
+          dst: /var/lib/kubernetes/coredns.yaml
+
+    kubelet:
+      archive1:
+        - src: files/cni-plugins-linux-amd64-v1.9.0.tgz
           dst: /usr/local/bin/
-        - src: https://github.com/opencontainers/runc/releases/download/v1.4.0/runc.amd64      
-          dst: /usr/local/sbin/runc
-    templates:
-      - src: templates/kubelet.service.j2
-        dst: /etc/systemd/system/kubelet.service
-      - src: templates/containerd.service.j2
-        dst: /etc/systemd/system/containerd.service
-    service_name:
-      - containerd
-      - kubelet
+      archive2:
+        - src: files/containerd-2.2.1-linux-amd64.tar.gz
+          dst: /usr/local/bin/
+      templates:
+        - src: templates/kubelet.service.j2
+          dst: /etc/systemd/system/kubelet.service
+        - src: templates/containerd.service.j2
+          dst: /etc/systemd/system/containerd.service
+        - src: templates/bootstrap-kubeconfig.yaml.j2
+          dst: /var/lib/kubernetes/bootstrap-kubeconfig.yaml
+        - src: templates/config.yaml.j2
+          dst: /var/lib/kubernetes/config.yaml
+
+      cluster_files:
+        ca-cert:
+          src: files/ca.crt
+          dst: /var/lib/kubernetes/ca.crt
+
+      params:
+        kubeconfig: /var/lib/kubernetes/kubeconfig
+        bootstrap-kubeconfig: /var/lib/kubernetes/bootstrap-kubeconfig.yaml
+        clusterdns: "10.96.0.10"
+        config: /var/lib/kubernetes/config.yaml
+        kubelet-key: /var/lib/kubernetes/kubelet.key
+        kubelet-cert: /var/lib/kubernetes/kubelet.crt
+        cluster_name: home-cluster
+        resolvConf: /etc/resolv.conf
+        ca_certs: /var/lib/kubernetes/ca.crt
+        creds: system:kubelet
+      urls:
+        kubelet:
+          - src: https://dl.k8s.io/v1.34.2/bin/linux/amd64/kubelet
+            dst: /usr/local/bin/kubelet
+          - src: https://github.com/containerd/containerd/releases/download/v2.2.1/containerd-2.2.1-linux-amd64.tar.gz
+            dst: /usr/local/bin/
+          - src: https://github.com/opencontainers/runc/releases/download/v1.4.0/runc.amd64      
+            dst: /usr/local/sbin/runc
+      execs:
+        - src: kubelet
+          dst: /usr/local/bin
+        - src: runc.amd64
+          dst: /usr/local/bin/runc
+        - src: kubectl
+          dst: /usr/local/bin/kubectl
+      dirs:
+        data_dir: /var/lib/kubernetes
+      service_name:
+        - containerd
+        - kubelet
 all:
   vars:
+    coredns:
+      clusterIP: 10.96.0.10
+      config:
+        src: templates/coredns.yaml.j2
+        dst: /var/lib/kubernetes/coredns.yaml
+    network:
+      version: 1.18.5
+      cilium_config:
+        src: templates/cilium.yaml.j2
+        dst: /var/lib/kubernetes/cilium.yaml
+      cidr: "{10.96.0.0/12}"
+      hubble: true
+      hubble_relay_enabled: true
+      hubble_ui_enabled: true
+      compressed:
+        src: files/cilium-linux-amd64.tar.gz
+        dst: /usr/local/bin
+
     common:
       pkgs:
         - tar
         - wget
         - vim
+        - openssl
 
       templates:
         - src: templates/hosts.j2
@@ -314,10 +405,13 @@ all:
       filebeat:
         app_base_dir: /opt/filebeat
         service: filebeat
+        elasticsearch_ip: "192.168.1.11:9200"
         compressed: files/filebeat-9.2.4-linux-x86_64.tar.gz
         templates:
           - src: templates/filebeat.service.j2
             dst: /etc/systemd/system/filebeat.service
+          - src: templates/filebeat.yml.j2
+            dst: /opt/filebeat/filebeat.yml
 
         sys_groups:
           filebeat:
@@ -333,26 +427,4 @@ all:
           filebeat:
             path: /opt/filebeat/filebeat.yml
             mode: "0640"
-
-        filebeat_regex:
-          path: /opt/filebeat/filebeat.yml
-          regex:
-            - old: "localhost:9200"
-              new: "192.168.1.11:9200"
-            - old: '#username: "elastic"'
-              new: 'username: "elastic"'
-            - old: '#password: "changeme"'
-              new: 'password: "changeme"'
-            - old: '^#- type: journald'
-              new: '- type: journald'
-            - old: '^#- type: journald'
-              new: '- type: journald'
-            - old: '#id: my-journald-id'
-              new: 'id: my-journald-id'
-            - old: '#seek: head'
-              new: 'seek: tail'
-            - old: 'path: \${path.config}/modules.d/\*.yml'
-              new: '#path: \${path.config}/modules.d/\*.yml'
-            - old: '#logging.level: debug'
-              new: 'logging.level: warning' 
 

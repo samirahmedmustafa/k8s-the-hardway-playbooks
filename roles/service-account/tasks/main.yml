@@ -4,7 +4,7 @@
   ansible.builtin.copy:
     src: "{{ item.value.src }}"
     dest: "{{ item.value.dst }}"
-  loop: "{{ serviceaccount_files | dict2items }}"
+  loop: "{{ serviceaccount | dict2items }}"
 
 
 

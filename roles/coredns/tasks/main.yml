@@ -1,0 +1,17 @@
+---
+# tasks file for roles/kubelet
+- name: deploy cilium network
+  block:
+    - name: write templates using jinja2
+      ansible.builtin.template:
+        src: "{{ coredns.config.src }}"
+        dest: "{{ coredns.config.dst }}"
+    
+    - name: deploy coredns
+      command: >
+        /usr/local/bin/kubectl apply -f {{ coredns.config.dst }}
+      delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+      run_once: true
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+

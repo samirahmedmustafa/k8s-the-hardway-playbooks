@@ -1,9 +1,0 @@
----
-- hosts: KUBE_APISERVER[0]
-  become: yes
-  gather_facts: false
-
-  roles:
-    - role: cilium
-      tags: cilium
-

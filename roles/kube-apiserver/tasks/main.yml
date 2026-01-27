@@ -1,13 +1,9 @@
 ---
-# tasks file for roles/etcd
-
-- name: Download binaries
-  ansible.builtin.get_url:
-    url: "{{ item.value.src }}"
-    dest: "{{ item.value.dst }}"
-    validate_certs: false
-    mode: '0655'
-  loop: "{{ urls | dict2items }}"
+- name: create directories
+  ansible.builtin.file:
+    path: "{{ item.value }}"
+    state: directory
+  loop: "{{ dirs | dict2items }}"
 
 - name: write templates using jinja2
   ansible.builtin.template:
@@ -15,11 +11,11 @@
     dest: "{{ item.dst }}"
   loop: "{{ templates }}"
 
-- name: create directories
-  ansible.builtin.file:
-    path: "{{ item }}"
-    state: directory
-  loop: "{{ dirs | dict2items }}"
+- name: copy execs 
+  ansible.builtin.copy:
+    src: "{{ execs['kube-apiserver'].src }}"
+    dest: "{{ execs['kube-apiserver'].dst }}"
+    mode: '0655'
 
 - name: copy CA certs
   ansible.builtin.copy:
@@ -27,6 +23,12 @@
     dest: "{{ item.value.dst }}"
     mode: '0644'
   loop: "{{ cluster_files | dict2items }}"
+
+- name: copy service-account certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ serviceaccount | dict2items }}"
 
 - name: copy server certs
   ansible.builtin.copy:
@@ -38,22 +40,15 @@
 - name: wait for etcd to be healthy
   command: >
     /usr/local/bin/etcdctl --endpoints={{ etcd_endpoints | join(',') }}
-    --cacert={{ cluster_files['ca-cert'].dst }}
-    --cert={{ host_files['etcd-certfile'].dst }}
-    --key={{ host_files['etcd-keyfile'].dst }}
+    --cacert=/etc/etcd/etcd-ca.crt --cert=/etc/etcd/etcd-server1.crt 
+    --key=/etc/etcd/etcd-server1.key
     endpoint health
   register: etcd_health
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
   retries: 10
-  delay: 3
+  run_once: true
+  delay: 2
   until: "'is healthy' in etcd_health.stdout"
-
-- name: validate TLS handshake to etcd
-  shell: |
-    openssl s_client -connect {{ item | regex_replace('https://', '') }} \
-    -cert {{ host_files['etcd-certfile'].dst }} \
-    -key {{ host_files['etcd-keyfile'].dst }} \
-    -CAfile {{ cluster_files['ca-cert'].dst }} < /dev/null
-  loop: "{{ etcd_endpoints }}"
 
 - name: Start and enable service
   systemd:
@@ -61,4 +56,20 @@
     state: started
     enabled: true
     daemon-reload: yes
+
+- name: test kube-apiserver-to-kubelet permissions
+  command: >
+    /usr/local/bin/kubectl auth can-i get nodes/proxy --as kube-apiserver 
+  register: auth
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  ignore_errors: true
+  failed_when: auth.rc == 5
+  run_once: true
+
+- name: create cluster role binding kube-apiserver-to-kubelet
+  command: >
+    /usr/local/bin/kubectl create clusterrolebinding kube-apiserver-to-kubelet --clusterrole=system:kubelet-api-admin --user=kube-apiserver
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+  when: "auth.stdout == 'no'"
 

@@ -1,2 +1,24 @@
 ---
-# tasks file for roles/cilium
+# tasks file for roles/kubelet
+- name: deploy cilium network
+  block:
+    - name: Extract archive 1
+      ansible.builtin.unarchive:
+        src: "{{ network.compressed.src }}"
+        dest: "{{ network.compressed.dst }}"
+        mode: 0655
+
+    - name: write templates using jinja2
+      ansible.builtin.template:
+        src: "{{ network.cilium_config.src }}"
+        dest: "{{ network.cilium_config.dst }}"
+    
+    - name: deploy cilium
+      command: >
+        /usr/local/bin/cilium install --version {{ network.version }} --set hubble.enabled=true --set hubble.relay.enabled=true --set hubble.ui.enabled=true -f {{ network.cilium_config.dst }}
+      delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+      run_once: true
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+  tags: step
+

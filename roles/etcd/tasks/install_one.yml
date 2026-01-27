@@ -1,17 +1,10 @@
 ---
 - name: Install etcd binaries
   block:
-    - name: Download etcd archive using curl
-      ansible.builtin.command: >
-        curl -L -o /tmp/etcd.tar.gz {{ item.value.src }}
-      args:
-        creates: /tmp/etcd.tar.gz
-
     - name: Extract etcd archive
       ansible.builtin.unarchive:
-        src: "/tmp/etcd.tar.gz"
+        src: "files/{{ files.etcd.src }}"
         dest: "{{ item.value.dst }}"
-        remote_src: yes
   rescue:
     - name: Cleanup failed download
       ansible.builtin.file:

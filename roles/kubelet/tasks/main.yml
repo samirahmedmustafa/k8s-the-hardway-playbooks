@@ -4,35 +4,61 @@
   shell: |
     swapoff -a
 
-- name: Download binaries
-  ansible.builtin.get_url:
-    url: "{{ item.src }}"
+- name: create directories
+  ansible.builtin.file:
+    path: "{{ item.value }}"
+    state: directory
+  loop: "{{ kubelet['dirs'] | dict2items }}"
+
+- name: Extract archive 1
+  ansible.builtin.unarchive:
+    src: "{{ item.src }}"
     dest: "{{ item.dst }}"
-    validate_certs: false
+    mode: 0655
+  loop: "{{ kubelet['archive1'] }}"
+
+- name: Extract archive 2
+  ansible.builtin.unarchive:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
+    mode: 0655
+    extra_opts: [--strip-components=1]
+  loop: "{{ kubelet['archive2'] }}"
+
+- name: copy execs
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
     mode: '0655'
-  loop: "{{ urls['kubelet'] }}"
+  loop: "{{ kubelet['execs'] }}"
 
-- name: create /var/lib/kubernetes/kube-scheduler.kubeconfig
+- name: copy cert
+  ansible.builtin.copy:
+    src: "{{ kubelet['cluster_files']['ca-cert'].src }}"
+    dest: "{{ kubelet['cluster_files']['ca-cert'].dst }}"
+
+- name: create /var/lib/kubernetes/kubelet.kubeconfig
   ansible.builtin.shell: |
-    /usr/local/bin/kubectl config set-cluster {{ params['cluster_name'] }} \
-      --certificate-authority={{ params["ca_certs"] }} \
+    /usr/local/bin/kubectl config set-cluster {{ kubelet['params']['cluster_name'] }} \
+      --certificate-authority={{ kubelet['cluster_files']["ca-cert"].dst }} \
       --embed-certs=true \
-      --server=127.0.0.1:6443 \
-      --kubeconfig={{ params["kubeconfig"] }}
+      --server=https://127.0.0.1:6443 \
+      --kubeconfig={{ kubelet['params']["kubeconfig"] }}
 
-    /usr/local/bin/kubectl config set-credentials {{ params["creds"] }} \
-      --client-certificate={{ cluster_files["kubelet-cert"].dst }} \
-      --client-key={{ cluster_files["kubelet-key"].dst }} \
+    /usr/local/bin/kubectl config set-credentials {{ kubelet['params']['creds'] }} \
+      --client-certificate={{ kubelet['params']["kubelet-cert"] }} \
+      --client-key={{ kubelet['params']["kubelet-key"] }} \
       --embed-certs=true \
-      --kubeconfig={{ params["kubeconfig"] }}
+      --kubeconfig={{ kubelet['params']['kubeconfig'] }}
 
     /usr/local/bin/kubectl config set-context default \
-      --cluster={{ params['cluster_name'] }} \
-      --user={{ params["creds"] }} \
-      --kubeconfig={{ params["kubeconfig"] }}
-    /usr/local/bin/kubectl config use-context default --kubeconfig={{ params["kubeconfig"] }}
+      --cluster={{ kubelet['params']['cluster_name'] }} \
+      --user={{ kubelet['params']["creds"] }} \
+      --kubeconfig={{ kubelet['params']["kubeconfig"] }}
+    /usr/local/bin/kubectl config use-context default --kubeconfig={{ kubelet['params']['kubeconfig'] }}
   args:
-    creates: "{{ params['kubeconfig'] }}"
+    creates: "{{ kubelet['params']['kubeconfig'] }}"
+
 
 - name: Read bootstrap token id from Kubernetes
   command: >
@@ -40,11 +66,13 @@
   register: token_secret_name
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
   run_once: true
+  tags: step
 
 - name: Extract token id
   set_fact:
     token_id: "{{ token_secret_name.stdout.split('bootstrap-token-')[1] }}"
   run_once: true
+  tags: step
 
 - name: Read token secret value
   command: >
@@ -53,29 +81,27 @@
   register: token_secret_b64
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
   run_once: true
+  tags: step
 
 - name: Decode token secret and build full token
   set_fact:
     token_secret: "{{ token_secret_b64.stdout | b64decode }}"
   run_once: true
+  tags: step
 
 - name: Decode token secret and build full token
   set_fact:
     full_token: "{{ token_id }}.{{ token_secret }}"
   run_once: true
-
-- name: Render bootstrap kubeconfig
-  template:
-    src: templates/bootstrap-kubeconfig.yaml.j2
-    dest: /var/lib/kubelet/bootstrap.kubeconfig
-    mode: "0600"
+  tags: step
 
 - name: write templates using jinja2
   ansible.builtin.template:
     src: "{{ item.src }}"
     dest: "{{ item.dst }}"
-  loop: "{{ templates }}"
+  loop: "{{ kubelet['templates'] }}"
   notify: restart_kubelet
+  tags: step
 
 - name: Start and enable service
   systemd:
@@ -83,5 +109,5 @@
     state: started
     enabled: true
     daemon-reload: yes
-  loop: "{{ service_name }}"
+  loop: "{{ kubelet['service_name'] }}"
 

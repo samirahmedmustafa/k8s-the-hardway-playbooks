@@ -6,9 +6,9 @@ Requires=containerd.service
 
 [Service]
 ExecStart=/usr/local/bin/kubelet \
-  --kubeconfig={{ params["kubeconfig"] }} \
-  --bootstrap-kubeconfig={{ params["bootstrap-kubeconfig"] }} \
-  --config={ params["config"] {}} \
+  --kubeconfig={{ kubelet['params']["kubeconfig"] }} \
+  --bootstrap-kubeconfig={{ kubelet['params']["bootstrap-kubeconfig"] }} \
+  --config={{ kubelet['params']["config"] }} \
   --rotate-certificates=true \
   --rotate-server-certificates=true \
   --register-node=true \

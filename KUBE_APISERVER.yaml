@@ -10,10 +10,18 @@
       tags: users
     - role: filebeat
       tags: filebeat
+    - role: admin-account
+      tags: admin-account
     - role: service-account
       tags: service-account
     - role: kube-apiserver
       tags: kube-apiserver
-    - role: admin-account
-      tags: admin-account
+    - role: cilium
+      tags:
+        - cilium
+        - never
+    - role: coredns
+      tags:
+        - coredns
+        - coredns
 

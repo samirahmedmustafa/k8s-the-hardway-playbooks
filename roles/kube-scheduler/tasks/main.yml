@@ -1,13 +1,23 @@
 ---
 # tasks file for roles/kube-scheduler
 
-- name: Download binaries
-  ansible.builtin.get_url:
-    url: "{{ item.value.src }}"
-    dest: "{{ item.value.dst }}"
-    validate_certs: false
+- name: create directories
+  ansible.builtin.file:
+    path: "{{ item.value }}"
+    state: directory
+  loop: "{{ dirs | dict2items }}"
+
+- name: write templates using jinja2
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
+  loop: "{{ templates }}"
+
+- name: copy execs
+  ansible.builtin.copy:
+    src: "{{ execs['kube-scheduler'].src }}"
+    dest: "{{ execs['kube-scheduler'].dst }}"
     mode: '0655'
-  loop: "{{ urls | dict2items }}"
 
 - name: write templates using jinja2
   ansible.builtin.template:
@@ -26,7 +36,7 @@
     /usr/local/bin/kubectl config set-cluster {{ params['cluster_name'] }} \
       --certificate-authority={{ params["ca_certs"] }} \
       --embed-certs=true \
-      --server=127.0.0.1:6443 \
+      --server=https://127.0.0.1:6443 \
       --kubeconfig={{ params["kubeconfig"] }}
 
     /usr/local/bin/kubectl config set-credentials {{ params["creds"] }} \

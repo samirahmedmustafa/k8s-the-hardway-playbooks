@@ -8,7 +8,7 @@ type: bootstrap.kubernetes.io/token
 stringData:
   token-id: {{ token_id }}
   token-secret: {{ token_secret }}
-  expiration: params["expiration"]
+  expiration: {{ params["expiration"] }}
   usage-bootstrap-authentication: "true"
   usage-bootstrap-signing: "true"
   auth-extra-groups: {{ params["auth-extra-groups"] }}

@@ -1,13 +1,72 @@
 ---
 # tasks file for roles/kube-controller-manager
+- name: create directories
+  ansible.builtin.file:
+    path: "{{ item.value }}"
+    state: directory
+  loop: "{{ dirs | dict2items }}"
 
-- name: Download binaries
-  ansible.builtin.get_url:
-    url: "{{ item.value.src }}"
-    dest: "{{ item.value.dst }}"
-    validate_certs: false
+- name: write templates using jinja2
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
+  loop: "{{ templates }}"
+
+- name: copy execs
+  ansible.builtin.copy:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
     mode: '0655'
-  loop: "{{ urls | dict2items }}"
+  loop: "{{ execs }}"
+
+- name: copy CA certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+    mode: '0644'
+  loop: "{{ cluster_files | dict2items }}"
+
+- name: copy cluster certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ cluster_files | dict2items }}"
+
+- name: copy service-account certs
+  ansible.builtin.copy:
+    src: "{{ item.value.src }}"
+    dest: "{{ item.value.dst }}"
+  loop: "{{ serviceaccount | dict2items }}"
+
+- name: create /var/lib/kubernetes/kube-controller-manager.kubeconfig
+  ansible.builtin.shell: |
+    /usr/local/bin/kubectl config set-cluster {{ params['cluster_name'] }} \
+      --certificate-authority={{ cluster_files['ca-cert'].dst }} \
+      --embed-certs=true \
+      --server=https://127.0.0.1:6443 \
+      --kubeconfig={{ params["kubeconfig"] }}
+
+    /usr/local/bin/kubectl config set-credentials {{ params["creds"] }} \
+      --client-certificate={{ cluster_files["kube-controller-manager-cert"].dst }} \
+      --client-key={{ cluster_files["kube-controller-manager-key"].dst }} \
+      --embed-certs=true \
+      --kubeconfig={{ params["kubeconfig"] }}
+
+    /usr/local/bin/kubectl config set-context default \
+      --cluster={{ params['cluster_name'] }} \
+      --user={{ params["creds"] }} \
+      --kubeconfig={{ params["kubeconfig"] }}
+    /usr/local/bin/kubectl config use-context default --kubeconfig={{ params["kubeconfig"] }}
+  args:
+    creates: "{{ params['kubeconfig'] }}"
+
+- name: write boostrap templates using jinja2
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dst }}"
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+  loop: "{{ bootstrap_templates }}"
 
 - name: write templates using jinja2
   ansible.builtin.template:
@@ -16,34 +75,6 @@
   loop: "{{ templates }}"
   notify: restart_controller_manager
 
-- name: copy cluster certs
-  ansible.builtin.copy:
-    src: "{{ item.value.src }}"
-    dest: "{{ item.value.dst }}"
-  loop: "{{ cluster_files | dict2items }}"
-
-- name: create /var/lib/kubernetes/kube-controller-manager.kubeconfig
-  ansible.builtin.shell: |
-    kubectl config set-cluster {{ params['cluster_name'] }} \
-      --certificate-authority={{ params['root-ca-file'] }} \
-      --embed-certs=true \
-      --server=127.0.0.1:6443 \
-      --kubeconfig={{ params["kubeconfig"] }}
-
-    kubectl config set-credentials {{ params["creds"]}} \
-      --client-certificate={{ cluster_files["kube-controller-manager-cert"].dst }} \
-      --client-key={{ cluster_files["kube-controller-manager-key"].dst }} \
-      --embed-certs=true \
-      --kubeconfig={{ params["kubeconfig"] }}
-
-    kubectl config set-context default \
-      --cluster={{ params['cluster_name'] }} \
-      --user={{ params["creds"] }} \
-      --kubeconfig={{ params["kubeconfig"] }}
-    kubectl config use-context default --kubeconfig={{ params["kubeconfig"] }}
-  args:
-    creates: "{{ params['kubeconfig'] }}"
-
 - name: Start and enable service
   systemd:
     name: "{{ service_name }}"
@@ -51,14 +82,27 @@
     enabled: true
     daemon-reload: yes
 
-- name: Check if file exists
-  ansible.builtin.stat:
-    path: "{{ params['token_file'] }}"
-  register: token_file_check
-
-- name: Set variable if file exists
-  ansible.builtin.set_fact:
-    token_file_exists: "{{ token_file_check.stat.exists }}"
+- name: create bootstrap token config
+  block:
+    - name: Check if any bootstrap token secret exists
+      command: >
+        /usr/local/bin/kubectl -n kube-system get secrets
+        -o jsonpath='{.items[?(@.type=="bootstrap.kubernetes.io/token")].metadata.name}'
+      register: bootstrap_secret_check
+      changed_when: false
+      failed_when: false
+    
+    - name: Set fact if bootstrap token exists
+      set_fact:
+        bootstrap_token_exists: "{{ bootstrap_secret_check.stdout | trim != '' }}"
+    
+    - name: Debug result
+      debug:
+        msg: >
+          Bootstrap token exists: {{ bootstrap_token_exists }}
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+  tags: step
 
 - name: create bootstrap token config
   block:
@@ -84,11 +128,18 @@
         dest: "{{ params['token_file'] }}"
 
     - name: Apply bootstrap token secret
-      command: "kubectl apply -f {{ params['token_file'] }}"
+      command: "/usr/local/bin/kubectl apply -f {{ params['token_file'] }}"
+      loop: "{{ bootstrap_templates }}"
+
+    - name: Apply bootstrap approval role bindings
+      command: "/usr/local/bin/kubectl apply -f {{ item.dst }}"
+      loop: "{{ bootstrap_templates }}"
+
+    - name: Apply all pending certificates
+      command: "/usr/local/bin/kubectl kubectl certificate approve $(/usr/local/bin/kubectl get csr -o name)"
+      loop: "{{ bootstrap_templates }}"
 
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
   run_once: true
-  when: token_file_exists == False
-
-
-
+  when: "bootstrap_token_exists == false"
+  tags: step

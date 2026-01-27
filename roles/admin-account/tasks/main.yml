@@ -1,33 +1,46 @@
 ---
 # tasks file for roles/admin-account
+- name: create directories
+  ansible.builtin.file:
+    path: "{{ item.value }}"
+    state: directory
+  loop: "{{ dirs | dict2items }}"
+
+- name: copy execs
+  ansible.builtin.copy:
+    src: "{{ execs.kubectl.src }}"
+    dest: "{{ execs.kubectl.dst }}"
+    mode: 0655
+
 - name: copy server certs
   ansible.builtin.copy:
     src: "{{ item.value.src }}"
     dest: "{{ item.value.dst }}"
-  loop: "{{ adminaccount_files | dict2items }}"
+  loop: "{{ adminaccount | dict2items }}"
 
 - name: create /var/lib/kubernetes/admin.kubeconfig
   ansible.builtin.shell: |
-    kubectl config set-cluster {{ params['cluster_name'] }} \
-      --certificate-authority={{ cluster_files['client-ca-file'].dst }} \
+    /usr/local/bin/kubectl config set-cluster {{ params['cluster_name'] }} \
+      --certificate-authority={{ cluster_files['ca-cert'].dst }} \
       --embed-certs=true \
-      --server=https://{{ hostvars[groups['LB'][0]]['ansible_host'] }}:6443 \
+      --server=https://{{ hostvars[groups['LB'][0]]['ansible_host'] }}:{{ kube_apiserver_port }} \
       --kubeconfig={{ admin_kubeconfig }}
 
-    kubectl config set-credentials admin \
-      --client-certificate={{ adminaccount_files['admin-account-cert'].dst }} \
-      --client-key={{ adminaccount_files['admin-account-key'].dst }} \
+    /usr/local/bin/kubectl config set-credentials admin \
+      --client-certificate={{ adminaccount['admin-account-cert'].dst }} \
+      --client-key={{ adminaccount['admin-account-key'].dst }} \
       --embed-certs=true \
       --kubeconfig={{ admin_kubeconfig }}
 
-    kubectl config set-context default \
+    /usr/local/bin/kubectl config set-context default \
       --cluster={{ params['cluster_name'] }} \
       --user=admin \
       --kubeconfig={{ admin_kubeconfig }}
-    kubectl config use-context default --kubeconfig={{ admin_kubeconfig }}
+    /usr/local/bin/kubectl config use-context default --kubeconfig={{ admin_kubeconfig }}
   args:
     creates: "{{ admin_kubeconfig }}"
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
 
 - name: create .kube if not exists
   ansible.builtin.file:
@@ -40,4 +53,5 @@
     dest: ~root/.kube/config
     remote_src: true 
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
 
