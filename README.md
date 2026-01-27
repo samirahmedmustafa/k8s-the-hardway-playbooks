@@ -45,6 +45,7 @@ Execute all playbooks in the below order
 	kube-system   hubble-ui-576dcd986f-rhwdb        2/2     Running   0          2m
    	```
     *hubble-relay will come online once coredns is deployed*
+   
 4. Deploy the coredns
 ```
 	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags coredns
