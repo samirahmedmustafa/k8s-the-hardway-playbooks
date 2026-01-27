@@ -24,8 +24,26 @@ Execute all playbooks in the below order
 	```
 	- Wait till nodes become ready
 	```
-		/usr/local/bin/kubectl get node
+	/usr/local/bin/kubectl get node
+ 	```
+ 	```
+		NAME       STATUS   ROLES    AGE    VERSION
+		worker-1   Ready    <none>   3m1s   v1.34.2
+		worker-2   Ready    <none>   3m1s   v1.34.2
 	```
+  	```
+   /usr/local/bin/kubectl get pods -A
+   	```
+   	```
+	NAMESPACE     NAME                              READY   STATUS    RESTARTS   AGE
+	kube-system   cilium-7fdht                      1/1     Running   0          2m
+	kube-system   cilium-envoy-t9dbc                1/1     Running   0          2m
+	kube-system   cilium-envoy-vwgsj                1/1     Running   0          2m
+	kube-system   cilium-jdcdr                      1/1     Running   0          2m
+	kube-system   cilium-operator-d5978dfc7-fwb5w   1/1     Running   0          2m
+	kube-system   hubble-relay-54774bdddb-mvhnl     0/1     Running   0          2m
+	kube-system   hubble-ui-576dcd986f-rhwdb        2/2     Running   0          2m
+   	```
 4. Deploy the coredns
 ```
 	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags coredns
