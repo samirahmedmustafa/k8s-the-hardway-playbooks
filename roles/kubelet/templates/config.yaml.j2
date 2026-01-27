@@ -10,6 +10,9 @@ authentication:
 authorization:
   mode: Webhook
 clusterDomain: "cluster.local"
+rotate-certificates: true
+serverTLSBootstrap: true
+registerNode: true
 clusterDNS:
   - "{{ kubelet['params']['clusterdns']}}"
 resolvConf: "/etc/resolv.conf"

@@ -1,5 +1,13 @@
 ---
 # tasks file for roles/kubelet
+
+- name: cilium status
+  command: >
+    /usr/local/bin/kubectl -n kube-system get pods -l k8s-app=cilium
+  register: cilium_status
+  delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
+  run_once: true
+
 - name: deploy cilium network
   block:
     - name: Extract archive 1
@@ -20,5 +28,5 @@
       run_once: true
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
   run_once: true
-  tags: step
+  when: "'Running' not in cilium_status.stdout"
 

@@ -66,13 +66,11 @@
   register: token_secret_name
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
   run_once: true
-  tags: step
 
 - name: Extract token id
   set_fact:
     token_id: "{{ token_secret_name.stdout.split('bootstrap-token-')[1] }}"
   run_once: true
-  tags: step
 
 - name: Read token secret value
   command: >
@@ -81,19 +79,16 @@
   register: token_secret_b64
   delegate_to: "{{ groups['KUBE_APISERVER'][0] }}"
   run_once: true
-  tags: step
 
 - name: Decode token secret and build full token
   set_fact:
     token_secret: "{{ token_secret_b64.stdout | b64decode }}"
   run_once: true
-  tags: step
 
 - name: Decode token secret and build full token
   set_fact:
     full_token: "{{ token_id }}.{{ token_secret }}"
   run_once: true
-  tags: step
 
 - name: write templates using jinja2
   ansible.builtin.template:
@@ -101,7 +96,6 @@
     dest: "{{ item.dst }}"
   loop: "{{ kubelet['templates'] }}"
   notify: restart_kubelet
-  tags: step
 
 - name: Start and enable service
   systemd:
