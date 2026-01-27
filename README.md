@@ -6,7 +6,7 @@
 - Inventory is made for the below IP addresses, all you need to do is to add your ssh public keys for your hosts and give the below IPs and hostnames
 
    <table>
-	    <tr><th>IP</th><th>Hostname</th></tr>
+	    <tr><th>Hostname</th><th>IP</th></tr>
 	    <tr><td>lb</td><td>192.168.1.50</td></tr>
 	    <tr><td>master-1</td><td>192.168.1.51</td></tr>
 	    <tr><td>master-2</td><td>192.168.1.52</td></tr>
