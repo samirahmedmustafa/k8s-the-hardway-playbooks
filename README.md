@@ -22,7 +22,10 @@ Execute all playbooks in the below order
 ```
 	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags cilium
 ```
-
+	- Wait till nodes become ready
+	```
+		/usr/local/bin/kubectl get node
+	```
 4. Deploy the coredns
 ```
 	ansible-playbook -i inventories/home-env01.yaml site.yaml --tags coredns
