@@ -4,6 +4,14 @@
   shell: |
     swapoff -a
 
+- name: Disable swap in /etc/fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#].*\s+swap\s+.*)$'
+    replace: '# \1'
+    backup: yes
+  tags: swapoff
+
 - name: create directories
   ansible.builtin.file:
     path: "{{ item.value }}"
