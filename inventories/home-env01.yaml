@@ -154,6 +154,12 @@ KUBE_APISERVER:
         dst: /etc/etcd/etcd-ca.crt
 
     cluster_files:
+      front-proxy-ca-cert:
+        src: files/front-proxy-ca.crt
+        dst: /var/lib/kubernetes/front-proxy-ca.crt
+      front-proxy-ca-key:
+        src: files/front-proxy-ca.key
+        dst: /var/lib/kubernetes/front-proxy-ca.key
       kube-apiserver-key:
         src: files/kube-apiserver.key
         dst: /var/lib/kubernetes/kube-apiserver.key
