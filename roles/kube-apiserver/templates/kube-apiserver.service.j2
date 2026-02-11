@@ -6,7 +6,6 @@ Documentation=https://github.com/kubernetes/kubernetes
 ExecStart=/usr/local/bin/kube-apiserver \
   --advertise-address={{ ansible_host }} \
   --allow-privileged=true \
-  --apiserver-count=3 \
   --audit-log-maxage=30 \
   --audit-log-maxbackup=3 \
   --audit-log-maxsize=100 \
@@ -15,6 +14,7 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --bind-address=0.0.0.0 \
   --enable-admission-plugins=NodeRestriction,ServiceAccount \
   --enable-bootstrap-token-auth  \
+  --enable-aggregator-routing \
   --etcd-cafile={{ etcd["etcdca-cert"].dst }} \
   --etcd-certfile={{ host_files["etcdserver-cert"].dst }} \
   --etcd-keyfile={{ host_files["etcdserver-key"].dst }} \
@@ -33,7 +33,7 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --client-ca-file={{ cluster_files["ca-cert"].dst }} \
   --tls-cert-file={{ cluster_files["kube-apiserver-cert"].dst }} \
   --tls-private-key-file={{ cluster_files["kube-apiserver-key"].dst }} \
-  --requestheader-allowed-names=front-proxy-client
+  --requestheader-allowed-names=front-proxy-client \
   --requestheader-client-ca-file={{ cluster_files["front-proxy-ca-cert"].dst }} \
   --requestheader-extra-headers-prefix=X-Remote-Extra- \
   --requestheader-group-headers=X-Remote-Group \
