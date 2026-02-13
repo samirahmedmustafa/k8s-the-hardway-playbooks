@@ -24,6 +24,7 @@
     dest: "{{ item.dst }}"
     mode: 0655
   loop: "{{ kubelet['archive1'] }}"
+  tags: archive1
 
 - name: Extract archive 2
   ansible.builtin.unarchive:
